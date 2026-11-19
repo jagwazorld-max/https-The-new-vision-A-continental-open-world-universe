@@ -10,15 +10,16 @@
 
 /* ALPHA 0.8 home interior */
 
-/* ALPHA 1.7 mobile touch controls */
+/* ALPHA 1.8 mobile movement and camera controls */
 .touch-controls{display:none;position:absolute;inset:auto 0 14px;z-index:6;justify-content:space-between;align-items:flex-end;padding:0 14px;pointer-events:none;touch-action:none}
-.touch-controls button{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;border:1px solid #e1c17c88;background:rgba(8,14,20,.78);color:#fff;backdrop-filter:blur(8px);box-shadow:0 4px 14px #0006}
-.touch-pad{display:flex;flex-direction:column;align-items:center;gap:5px}
-.touch-pad>button,.touch-pad div button{width:46px;height:46px;border-radius:13px;font-size:19px}
-.touch-pad div{display:flex;gap:5px}
-.touch-actions{display:grid;grid-template-columns:repeat(2,54px);gap:7px;align-items:end}
-.touch-actions button{width:54px;height:48px;border-radius:14px;font-size:12px;font-weight:800;letter-spacing:.5px}
+.touch-controls button{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;border:1px solid #e1c17c88;background:rgba(8,14,20,.82);color:#fff;backdrop-filter:blur(8px);box-shadow:0 4px 14px #0006}
+.touch-stick{width:142px;height:142px;display:grid;place-items:center;pointer-events:auto;touch-action:none}
+.touch-stick-ring{width:126px;height:126px;border:1px solid #e1c17c88;border-radius:50%;background:radial-gradient(circle,rgba(216,179,106,.12),rgba(8,14,20,.58));display:grid;place-items:center;box-shadow:0 4px 18px #0007}
+.touch-stick-knob{width:52px;height:52px;border:1px solid #f1d59b;background:rgba(216,179,106,.82);border-radius:50%;box-shadow:0 3px 12px #0008;transform:translate(0,0)}
+.camera-look{position:absolute;right:0;bottom:100px;width:48%;height:36%;pointer-events:auto;touch-action:none;background:linear-gradient(135deg,transparent 65%,rgba(216,179,106,.035));}
+.touch-actions{position:relative;z-index:2;display:grid;grid-template-columns:repeat(2,54px);gap:7px;align-items:end;pointer-events:none}
+.touch-actions button{pointer-events:auto;width:54px;height:48px;border-radius:14px;font-size:12px;font-weight:800;letter-spacing:.5px}
 .touch-actions button small{font-size:7px;color:#d8b36a}
 .touch-controls button:active,.touch-controls button.pressed{background:#d8b36a;color:#101316;transform:scale(.96)}
-@media (pointer:coarse),(max-width:760px){.touch-controls{display:flex}.desktop-controls{display:none}.mission-card{max-width:44vw}.minimap-wrap{bottom:190px}.dialogue{bottom:170px}.hud-right{top:82px}.touch-actions{grid-template-columns:repeat(3,48px)}.touch-actions button{width:48px;height:44px}.touch-pad>button,.touch-pad div button{width:42px;height:42px}}
-@media (max-width:390px){.touch-controls{padding:0 8px}.touch-actions{grid-template-columns:repeat(3,43px);gap:5px}.touch-actions button{width:43px;height:40px}.touch-pad>button,.touch-pad div button{width:38px;height:38px}.minimap-wrap{bottom:178px}}
+@media (pointer:coarse),(max-width:760px){.touch-controls{display:flex}.desktop-controls{display:none}.mission-card{max-width:44vw}.minimap-wrap{bottom:190px}.dialogue{bottom:170px}.hud-right{top:82px}.touch-actions{grid-template-columns:repeat(3,48px)}.touch-actions button{width:48px;height:44px}.touch-stick{width:126px;height:126px}.touch-stick-ring{width:112px;height:112px}.touch-stick-knob{width:46px;height:46px}}
+@media (max-width:390px){.touch-controls{padding:0 8px}.touch-actions{grid-template-columns:repeat(3,43px);gap:5px}.touch-actions button{width:43px;height:40px}.touch-stick{width:112px;height:112px}.touch-stick-ring{width:100px;height:100px}.touch-stick-knob{width:42px;height:42px}.minimap-wrap{bottom:178px}}
