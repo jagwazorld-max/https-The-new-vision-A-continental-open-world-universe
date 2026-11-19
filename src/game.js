@@ -22,6 +22,7 @@ let paused = false;
 let speed = 0;
 let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionStage = 0, missionPulse = 0;
 let dialogueActionHandler = null;
+let inShop = false;
 const shopPosition = new THREE.Vector3(39.5, 0, 16);
 const traffic = [];
 const pedestrians = [];
@@ -208,7 +209,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function exitVehicle() {
   if(playerMode!=="vehicle"||Math.abs(speed)>2.2)return;
@@ -235,10 +236,10 @@ function interact() {
   else if(missionStage===1)showDialogue("DOCK WORKER","That's the crate we were waiting for. The waterfront crew can take it from here. Thank you for getting it here safely.","COMPLETE DELIVERY · $1,000");
   return;
  }
- if(player.position.distanceTo(shopPosition)<4.8)showDialogue("CORNER MARKET","Welcome in. Pick up a field kit for $250. Your purchase is saved on this device.","BUY FIELD KIT · $250",buyFieldKit);
+ if(player.position.distanceTo(shopPosition)<4.8)showDialogue("CORNER MARKET","Welcome. Come inside and browse the shelves.","ENTER MARKET",()=>{ closeDialogue(); inShop=true; player.position.set(0,-50,6); avatar.position.copy(player.position); avatar.visible=true; player.heading=Math.PI; avatar.rotation.y=player.heading; saveProgress(); });
 }
 
-function makeShopAndLandmarks() {
+function makeShopInterior() {\n const room=new THREE.Group(); room.position.y=-50;\n box(room,0,-.18,0,16,.35,16,material(0x6e6b60),false);\n const wall=material(0xb6a78e);\n box(room,0,2.5,-8,16,5,.35,wall); box(room,-8,2.5,0,.35,5,16,wall); box(room,8,2.5,0,.35,5,16,wall); box(room,0,2.5,8,16,5,.35,wall);\n box(room,0,4.95,0,16,.25,16,material(0x42494a),false);\n for(const x of [-4,4]) {\n  box(room,x,1.35,-1,1.1,2.7,5.2,material(0x72563c));\n  for(let level=0;level<3;level++) box(room,x, .55+level*.82,-1,1.25,.12,5.35,material(0xc3a16a),false);\n  for(let n=0;n<4;n++) box(room,x+(n%2?-.25:.25),.85+Math.floor(n/2)*.82,-2.7+n*.95,.28,.38,.28,material([0x9c7042,0x557b75,0xb9a56e,0x8b554b][n]),false);\n }\n box(room,0,.65,5.6,5,.9,1.1,material(0x634a35));\n const labelCanvas=document.createElement("canvas");labelCanvas.width=512;labelCanvas.height=128;const c=labelCanvas.getContext("2d");c.fillStyle="#17252a";c.fillRect(0,0,512,128);c.fillStyle="#e1bd78";c.font="bold 58px sans-serif";c.textAlign="center";c.fillText("WELCOME",256,82);\n const label=new THREE.Mesh(new THREE.PlaneGeometry(5,1.25),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(labelCanvas)}));label.position.set(0,3.1,-7.78);room.add(label); scene.add(room);\n}\n\nfunction makeShopAndLandmarks() {
  const shop = new THREE.Group(); shop.position.set(48,0,16);
  box(shop,0,3,0,12,6,10,material(0xb69a72));
  box(shop,0,6.12,0,12.3,.24,10.3,material(0x42494a),false);
@@ -257,7 +258,7 @@ function makeShopAndLandmarks() {
  const clockFace=new THREE.Mesh(new THREE.CircleGeometry(1.45,32),new THREE.MeshBasicMaterial({color:0xe6d2a4}));clockFace.position.set(0,17.2,4.56);tower.add(clockFace);
  const hand=new THREE.Mesh(new THREE.BoxGeometry(.08,1.05,.04),material(0x27343a));hand.position.set(0,17.45,4.62);tower.add(hand);scene.add(tower);
  buildingBounds.push({minX:-54,maxX:-42,minZ:42,maxZ:54});
- makeStaticNpc(40,16,0x9b884e);
+ makeStaticNpc(40,16,0x9b884e);\n makeShopInterior();
 }
 
 function buildWorld() {
@@ -353,7 +354,7 @@ function update(delta) {
   const dir=new THREE.Vector3(Math.sin(player.heading),0,Math.cos(player.heading)),prev=player.position.clone();
   player.position.addScaledVector(dir,((f?1:0)-(b?1:0))*pace*delta);
   player.position.x=clamp(player.position.x,-112,112);player.position.z=clamp(player.position.z,-105,112);
-  if(collidesWithBuilding(player.position))player.position.copy(prev);
+  if(inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
   for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45)player.position.copy(prev);
   avatar.position.copy(player.position);avatar.rotation.y=player.heading;
   const moving=f||b;avatar.userData.limbs.forEach((limb,i)=>{const swing=moving?Math.sin(clock.elapsedTime*(pace>6?11:7))*.42:0;limb.rotation.x=swing*(i%2?-1:1);});
@@ -440,7 +441,7 @@ try {
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
       if(Number.isFinite(saved.playerHeading))player.heading=saved.playerHeading;
-      if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
+      if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}\n      if(saved.inShop && playerMode==="foot"){inShop=true;player.position.set(0,-50,6);avatar.position.copy(player.position);}
       if(missionStage===1)missionMarker.position.set(-25,0,-42);
       if(missionComplete||missionStage===2)missionMarker.visible=false;
       cashLabel.textContent=world.cash.toLocaleString();
