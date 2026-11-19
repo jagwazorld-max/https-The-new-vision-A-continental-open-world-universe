@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 0.3 on-foot exploration
+## Current milestone — 0.4 first story mission
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -13,7 +13,9 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Building and vehicle collision checks stop the player car passing through solid objects.
 - On-foot third-person character with basic walk/run limb animation.
 - Press **F** to exit or re-enter the starter vehicle (re-entry requires being nearby; exit requires the vehicle to be nearly stopped).
-- Press **E** near the gold beacon to complete the first contact mission and earn $500.
+- First two-step story mission: meet the waterfront contact, accept a supply delivery, then hand it to the dock worker.
+- Context dialogue panel with mission acceptance and completion actions.
+- Completing the delivery awards $1,000; mission stage and cash persist in the local save.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
 - Responsive title screen and local browser save for basic progress.
@@ -29,7 +31,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 
 - **W / A / S / D** or arrow keys — drive and steer
 - **F** — enter or exit vehicle
-- **E** — interact with the gold mission beacon while on foot
+- **E** — talk to the mission contact or dock worker while on foot
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
 - **Esc** — pause or resume
