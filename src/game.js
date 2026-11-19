@@ -26,7 +26,7 @@ let inShop = false;
 let inApartment = false;
 let ownsApartment = false;
 let homeSpawn = null;
-const apartmentDoorPosition = new THREE.Vector3(16, 0, -25.5);
+const apartmentDoorPosition = new THREE.Vector3(16, 0, -6.5);
 const shopPosition = new THREE.Vector3(39.5, 0, 16);
 const traffic = [];
 const pedestrians = [];
@@ -258,12 +258,12 @@ function interact() {
  if(playerMode!=="foot")return;
  if(inApartment) {
   if(player.position.distanceTo(new THREE.Vector3(0,-80,6))<3.5) {
-   inApartment=false; player.position.set(16,0,-25.5); avatar.position.copy(player.position);
+   inApartment=false; player.position.set(16,0,-6.5); avatar.position.copy(player.position);
    showDialogue("YOUR APARTMENT","You stepped outside. Your home ownership and furnishings are saved on this device.","CLOSE",closeDialogue);
    saveProgress(); return;
   }
   if(player.position.distanceTo(new THREE.Vector3(-4,-80,-2))<3.5) {
-   homeSpawn=[16,0,-25.5];
+   homeSpawn=[16,0,-6.5];
    showDialogue("YOUR BEDROOM","You rest in your own apartment. This address is now saved as your home spawn point.","SET HOME SPAWN",()=>{closeDialogue();saveProgress();});
    return;
   }
