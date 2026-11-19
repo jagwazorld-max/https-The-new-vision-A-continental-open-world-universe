@@ -676,8 +676,9 @@ function buildWorld() {
   scene.background = new THREE.Color(0x9cb6c0);
   scene.fog = new THREE.Fog(0x9cb6c0, 65, 190);
   camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, .1, 300);
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+  const isTouchDevice=matchMedia("(pointer: coarse)").matches || innerWidth<760;
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: !isTouchDevice, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isTouchDevice?1.25:1.7));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -688,7 +689,7 @@ function buildWorld() {
   const sun = new THREE.DirectionalLight(0xffe0b3, 3.1);
   sun.position.set(-35, 65, 25);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(isTouchDevice?1024:2048, isTouchDevice?1024:2048);
   sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
   sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
   scene.add(sun);
@@ -881,7 +882,7 @@ window.addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia("(pointer: coarse)").matches || innerWidth<760 ? 1.25 : 1.7));
 });
 document.querySelector("#start-button").addEventListener("click", startGame);
 document.querySelector("#pause-button").addEventListener("click", () => { if (running) setPaused(true); });
