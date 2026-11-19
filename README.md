@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 1.1 police patrols and wanted system
+## Current milestone — 1.2 health, inventory and clinic
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -29,6 +29,10 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Added a marked police cruiser with flashing red-and-blue emergency lights and an active pursuit behaviour.
 - Dangerous high-speed collisions with pedestrians alert the police and raise the wanted level, up to three stars. Patrol officers pursue the player, and wanted status clears after the pursuit timer expires.
 - If officers catch the player, a $250 fine is deducted and the pursuit ends. The HUD displays the current wanted status.
+- Added a player health meter. On-foot collisions with traffic cause damage; reaching zero triggers recovery at the clinic and a $100 recovery charge.
+- Press **I** to inspect the inventory, including health, fuel and Field Kit count. Use a Field Kit from the inventory to restore up to 40 health.
+- Added a Community Clinic landmark. On foot, press **E** near the entrance to purchase full treatment for $150.
+- Health and inventory supplies are saved locally, and older saves load with default full health.
 - Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
@@ -45,6 +49,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 
 - **W / A / S / D** or arrow keys — drive and steer
 - **F** — enter or exit vehicle
+- **I** — open inventory and use a Field Kit.
 - **E** — talk to mission characters, enter the market or apartment, refuel at the station, shop, and use home furniture while on foot
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
