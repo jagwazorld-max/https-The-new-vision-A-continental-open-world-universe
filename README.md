@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 0.8 ownable apartment and enterable market
+## Current milestone — 0.9 apartment furnishing and home spawn
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -22,7 +22,8 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Added a live district minimap showing the player, Corner Market, civic tower and active mission marker.
 - Corner Market is enterable: explore its interior, browse stocked shelves, buy Field Kits, and leave through the entrance. Interior position is preserved in local saves.
 - Added an ownable Central District apartment for $1,500, with a furnished bedroom, living room, work desk and wardrobe.
-- Apartment ownership and interior location persist in the local save; resting at the bed saves the home spawn point.
+- Apartment ownership and interior location persist in the local save; resting at the bed saves the home spawn point, which is now used when the player reloads the game on foot.
+- Added purchasable home furnishings: a living-room television/media unit ($400), indoor plant ($250) and framed artwork ($300). Purchased items appear in the apartment and persist in the local save.
 - Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
