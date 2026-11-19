@@ -236,7 +236,7 @@ function update(delta) {
     speed = 0;
   }
   for (const car of traffic) {
-    if (vehicle.position.distanceTo(car.mesh.position) < 3.15) {
+    if (vehicle.position.distanceTo(car.mesh.position) < 2.2) {
       vehicle.position.copy(previousPosition);
       speed = 0;
       break;
