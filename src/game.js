@@ -702,7 +702,7 @@ function buildWorld() {
   makeHospital();
   makePoliceStation();
   makePoliceInterior();
-  makeStaticNpc(0,-50,-5,0x9b884e);
+  const marketClerk=makeStaticNpc(0,-5,0x9b884e);marketClerk.position.y=-50;
   makeStaticNpc(68,-42,0x496b76);
   makeStaticNpc(-12,4,0xd0a45c);
   patrolCar=makePoliceCar();
