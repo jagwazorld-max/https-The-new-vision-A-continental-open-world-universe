@@ -70,7 +70,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
 - **Esc** — pause or resume
-- **Mobile** — drag the virtual joystick to move/drive, swipe the right side of the screen to look around, and tap the action buttons to interact, enter/exit the car, sprint, open inventory or use the stun baton.
+- **Mobile** — drag the virtual joystick to move/drive, swipe the right side of the screen to look around, and tap the action buttons to interact, enter/exit the car, sprint, brake, open inventory or use the stun baton.
 
 ## Project structure
 
