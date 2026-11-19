@@ -4,13 +4,13 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 2.6 safer traffic flow
+## Current milestone — 2.7 two-way traffic network
 
 - Browser-based 3D scene powered by Three.js.
 - A continuous 12-minute day/night cycle changes the sky, fog, sunlight, ambient light and exposure; the in-game clock is shown in the top bar. The world clock is saved with player progress.
 - Street lamps illuminate the main road grid at night, building windows glow after dark, and the player's car headlights brighten the road ahead. Night lighting fades smoothly with the day cycle.
 - Added raised curbs and paved sidewalks along the road grid, zebra crossings at key junctions, and a four-way traffic-signal installation at the central civic intersection. Signals are currently visual city infrastructure; traffic-light AI is a later upgrade.
-- Traffic lights cycle through green, amber and red; ambient cars slow down and stop at junction stop-lines, then accelerate when permitted. Vehicles also maintain lane-specific following gaps and brake smoothly behind slower traffic.
+- Traffic lights cycle through green, amber and red; north-south ambient cars slow down and stop at junction stop-lines. Vehicles on both north-south and east-west streets maintain lane-specific following gaps and brake smoothly behind slower traffic.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
 - Third-person follow camera and a drivable starter vehicle.
 - Moving ambient traffic and pedestrians bring the starter district to life.
