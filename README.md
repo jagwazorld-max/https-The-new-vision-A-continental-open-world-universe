@@ -4,13 +4,13 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 2.8 coordinated intersection signals
+## Current milestone — 2.9 turning traffic
 
 - Browser-based 3D scene powered by Three.js.
 - A continuous 12-minute day/night cycle changes the sky, fog, sunlight, ambient light and exposure; the in-game clock is shown in the top bar. The world clock is saved with player progress.
 - Street lamps illuminate the main road grid at night, building windows glow after dark, and the player's car headlights brighten the road ahead. Night lighting fades smoothly with the day cycle.
 - Added raised curbs and paved sidewalks along the road grid, zebra crossings at key junctions, and a four-way traffic-signal installation at the central civic intersection. Signals are currently visual city infrastructure; traffic-light AI is a later upgrade.
-- The central four-way junction now runs a protected two-axis signal cycle: north-south traffic receives green while east-west traffic waits, followed by an amber clearance and the east-west phase. Traffic on both axes obeys stop-lines and maintains lane-specific following gaps.
+- The central four-way junction runs a protected two-axis signal cycle. Selected ambient vehicles now make a smooth 90-degree turn at their first eligible junction using a cubic path, then continue on the crossing road; the remaining vehicles continue straight. Both axes obey stop-lines and maintain lane-specific following gaps.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
 - Third-person follow camera and a drivable starter vehicle.
 - Moving ambient traffic and pedestrians bring the starter district to life.
