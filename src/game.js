@@ -22,6 +22,7 @@ let scene, camera, renderer, player, vehicle, clock;
 let cameraPitch = 0, cameraYaw = 0;
 let worldTime = 0.28;
 let sunLight = null, hemiLight = null;
+const streetLamps = [], buildingWindowMaterials = [], vehicleHeadlights = [];
 const clockLabel = document.querySelector("#world-clock");
 let running = false;
 let paused = false;
@@ -97,7 +98,8 @@ function makeBuilding(x, z, w, d, h, seed) {
   box(group, 0, h / 2, 0, w, h, d, base);
   const roof = material(0x555d5c);
   box(group, 0, h + .12, 0, w + .12, .24, d + .12, roof, false);
-  const windowMat = new THREE.MeshStandardMaterial({ color: 0x253b46, roughness: .32, metalness: .12 });
+  const windowMat = new THREE.MeshStandardMaterial({ color: 0x253b46, roughness: .32, metalness: .12, emissive: 0xffc66b, emissiveIntensity: 0 });
+  buildingWindowMaterials.push(windowMat);
   const rows = Math.max(1, Math.floor(h / 2.2));
   const cols = Math.max(1, Math.floor(w / 1.8));
   for (let row = 0; row < rows; row++) {
@@ -112,6 +114,24 @@ function makeBuilding(x, z, w, d, h, seed) {
   }
   scene.add(group);
   buildingBounds.push({ minX: x - w / 2 - 1.4, maxX: x + w / 2 + 1.4, minZ: z - d / 2 - 1.8, maxZ: z + d / 2 + 1.8 });
+}
+function makeStreetLighting(isTouchDevice) {
+  const poleMat = material(0x343b3d, .7);
+  const lampMat = new THREE.MeshStandardMaterial({ color: 0xffe5b3, emissive: 0xffc36b, emissiveIntensity: .08 });
+  const positions = [[-48,0],[-16,0],[16,0],[48,0],[0,-48],[0,-16],[0,16],[0,48],[-48,-32],[48,32]];
+  positions.forEach(([x,z],index)=>{
+    const pole = new THREE.Group();
+    pole.position.set(x,0,z);
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.075,.11,5.8,8),poleMat);
+    shaft.position.y=2.9; pole.add(shaft);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(.9,.09,.09),poleMat);
+    arm.position.set(index%2===0?.35:-.35,5.55,0); pole.add(arm);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),lampMat);
+    bulb.position.set(index%2===0?.72:-.72,5.45,0); pole.add(bulb);
+    const glow = new THREE.PointLight(0xffd18a,0,24,2);
+    glow.position.copy(bulb.position); pole.add(glow);
+    scene.add(pole); streetLamps.push({glow,bulbMat:lampMat});
+  });
 }
 function makeTree(x, z, scale = 1) {
   const group = new THREE.Group();
@@ -142,7 +162,12 @@ function makeCar() {
     tire.position.set(x, .42, z);
     group.add(tire);
   }
-  const lightMat = new THREE.MeshStandardMaterial({ color: 0xffe4a0, emissive: 0x77501a });
+  const lightMat = new THREE.MeshStandardMaterial({ color: 0xffe4a0, emissive: 0xffc76b, emissiveIntensity: .35 });
+  for (const x of [-.62, .62]) {
+    const beam = new THREE.PointLight(0xffd995, 0, 26, 2);
+    beam.position.set(x, .82, 2.08);
+    group.add(beam); vehicleHeadlights.push(beam);
+  }
   for (const x of [-.62, .62]) {
     const light = new THREE.Mesh(new THREE.BoxGeometry(.35, .16, .05), lightMat);
     light.position.set(x, .76, 1.93);
@@ -737,6 +762,7 @@ function buildWorld() {
   water.rotation.x = -Math.PI / 2; water.position.set(0, -.08, -160); scene.add(water);
   const shore = new THREE.Mesh(new THREE.PlaneGeometry(240, 12), material(0xc2ad82));
   shore.rotation.x = -Math.PI / 2; shore.position.set(0, -.01, -112); scene.add(shore);
+  makeStreetLighting(isTouchDevice);
   makeShopAndLandmarks();
   makeFuelStation();
   makeHospital();
@@ -769,6 +795,10 @@ function updateWorldLighting(delta) {
   scene.background.copy(sky);
   scene.fog.color.copy(sky);
   sunLight.intensity = .12 + daylight * 3.0;
+  const nightLighting = 1 - daylight;
+  streetLamps.forEach(({glow,bulbMat})=>{glow.intensity=nightLighting*2.6;bulbMat.emissiveIntensity=.08+nightLighting*1.8;});
+  buildingWindowMaterials.forEach(windowMat=>{windowMat.emissiveIntensity=nightLighting*.9;});
+  vehicleHeadlights.forEach(light=>{light.intensity=nightLighting*18;});
   sunLight.color.setRGB(1, .68 + daylight * .2, .48 + daylight * .38);
   sunLight.position.set(Math.cos(angle) * 75, Math.max(8, Math.sin(angle) * 85), 25);
   hemiLight.intensity = .42 + daylight * 1.7;
