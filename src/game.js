@@ -50,6 +50,12 @@ let activeCityContract = -1;
 let selectedCityContract = 0;
 let contractRecovered = false;
 const completedCityContracts = new Set();
+const npcDialogueIndex = { clerk:0, doctor:0, attendant:0 };
+const npcDialogue = {
+ clerk:{name:"MARKET CLERK",lines:["Fresh supplies come in every morning. The Field Kits are kept on the two centre shelves.","The waterfront road is busiest around midday. Keep an eye out for delivery vans near the docks.","People say the old service yard used to store city records. Nobody goes there after dark."]},
+ doctor:{name:"DR. AMINA",lines:["Welcome to the Community Clinic. We treat everyone here, whether they live in the district or are just passing through.","Drink water when you are out exploring, and do not ignore an injury. Small accidents can become serious.","The police station coordinates local assistance contracts. Ask at their operations board if you want to help the community."]},
+ attendant:{name:"FUEL ATTENDANT",lines:["Welcome to CROWNLINE Fuel. Check your tank before taking a long drive outside the central district.","The coastal highway is smoother than the old service road, but watch your speed around pedestrians.","Our station stays open through the evening. A small top-up now can save you a long walk later."]}
+};
 const cityContracts = [
  {name:"LOST EVIDENCE",detail:"Recover a missing evidence case from the old service yard.",x:-42,z:30,reward:650},
  {name:"COMMUNITY SUPPLIES",detail:"Collect a sealed supply pack from the eastern depot.",x:50,z:-64,reward:850}
@@ -234,6 +240,7 @@ function showDialogue(speaker,message,action,handler=advanceMission) {
  dialoguePanel.classList.remove("hidden");
 }
 function closeDialogue(){dialoguePanel.classList.add("hidden");dialogueActionHandler=null;}
+function talkToLocalNpc(id){const person=npcDialogue[id];if(!person)return;const index=npcDialogueIndex[id]||0;showDialogue(person.name,person.lines[index],"ASK ANOTHER QUESTION",()=>{npcDialogueIndex[id]=(index+1)%person.lines.length;saveProgress();talkToLocalNpc(id);});}
 function advanceMission() {
  closeDialogue();
  if(missionStage===0){
@@ -247,7 +254,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,securityMissionActive,securityMissionComplete,hasStunBaton,securityTargetsRemaining,inPoliceStation:inPoliceStation && playerMode==="foot",activeCityContract,contractRecovered,completedCityContracts:[...completedCityContracts],wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,securityMissionActive,securityMissionComplete,hasStunBaton,securityTargetsRemaining,npcDialogueIndex, inPoliceStation:inPoliceStation && playerMode==="foot",activeCityContract,contractRecovered,completedCityContracts:[...completedCityContracts],wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function refuelVehicle() {
  closeDialogue();
@@ -422,6 +429,7 @@ function interact() {
    inShop=false; player.position.set(39.5,0,22.5); avatar.position.copy(player.position);
    showDialogue("CORNER MARKET","You stepped back out onto the street.","CLOSE",closeDialogue); saveProgress(); return;
   }
+  if(player.position.distanceTo(new THREE.Vector3(0,-50,-5))<3.2){talkToLocalNpc("clerk");return;}
   if(player.position.distanceTo(new THREE.Vector3(-4,-50,-1))<3.2 || player.position.distanceTo(new THREE.Vector3(4,-50,-1))<3.2) {
    showDialogue("CORNER MARKET · SHELF","Field Kit · $250. A compact kit for your travels.","BUY FIELD KIT · $250",buyFieldKit); return;
   }
@@ -429,6 +437,8 @@ function interact() {
  }
  if(player.position.distanceTo(securityOfficerPosition)<6) {startSecurityMission();return;}
  if(activeCityContract>=0 && player.position.distanceTo(contractMarker.position)<5){contractRecovered=true;const c=cityContracts[activeCityContract];showDialogue("ASSIGNMENT RECOVERED",c.name+" objective secured. Return to the police station operations board to file the report and collect $"+c.reward+".","RETURN TO STATION",closeDialogue);saveProgress();return;}
+ if(player.position.distanceTo(new THREE.Vector3(68,0,-42))<4.8){talkToLocalNpc("doctor");return;}
+ if(player.position.distanceTo(new THREE.Vector3(-12,0,4))<4.5){talkToLocalNpc("attendant");return;}
  if(player.position.distanceTo(hospitalPosition)<7) {
   showDialogue("CROWNLINE COMMUNITY CLINIC","Medical treatment restores your health to 100%. Treatment fee: $150. Current health: "+Math.round(health)+"%.","GET TREATMENT · $150",visitHospital);return;
  }
@@ -692,6 +702,9 @@ function buildWorld() {
   makeHospital();
   makePoliceStation();
   makePoliceInterior();
+  makeStaticNpc(0,-50,-5,0x9b884e);
+  makeStaticNpc(68,-42,0x496b76);
+  makeStaticNpc(-12,4,0xd0a45c);
   patrolCar=makePoliceCar();
   vehicle = makeCar();
   populateLife();
@@ -773,7 +786,6 @@ function drawMinimap() {
   dot(-80,-48,"#7da7e8",4); // Police station
   if (missionMarker?.visible) dot(missionMarker.position.x, missionMarker.position.z, "#f0d078",4);
   if(contractMarker?.visible) dot(contractMarker.position.x,contractMarker.position.z,"#7ed7b1",4);
-  if(contractMarker?.visible) dot(contractMarker.position.x,contractMarker.position.z,"#7ed7b1",4);
   dot(center.x,center.z,"#ffffff",4);
   ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.strokeRect(.5,.5,w-1,h-1);
   ctx.fillStyle="#d8b36a";ctx.font="bold 9px sans-serif";ctx.fillText("N",w-13,12);
@@ -838,6 +850,7 @@ try {
       else if(saved.inShop && playerMode==="foot"){inShop=true;inPoliceStation=false;player.position.set(0,-50,6);avatar.position.copy(player.position);}
       else if(saved.inPoliceStation && playerMode==="foot"){inPoliceStation=true;player.position.set(0,-110,6);avatar.position.copy(player.position);}
       else if(homeSpawn && playerMode==="foot"){player.position.fromArray(homeSpawn);avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
+      if(saved.npcDialogueIndex&&typeof saved.npcDialogueIndex==="object")for(const id of Object.keys(npcDialogueIndex)){const value=saved.npcDialogueIndex[id];if(Number.isInteger(value))npcDialogueIndex[id]=Math.max(0,Math.min(npcDialogue[id].lines.length-1,value));}
       contractRecovered=Boolean(saved.contractRecovered);
       if(Array.isArray(saved.completedCityContracts))saved.completedCityContracts.forEach(i=>{if(Number.isInteger(i)&&i>=0&&i<cityContracts.length)completedCityContracts.add(i);});
       activeCityContract=Number.isInteger(saved.activeCityContract)&&saved.activeCityContract>=0&&saved.activeCityContract<cityContracts.length?saved.activeCityContract:-1;
