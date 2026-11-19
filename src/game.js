@@ -23,6 +23,10 @@ let paused = false;
 let speed = 0;
 let fuel = 100;
 const fuelCapacity = 100;
+let wantedLevel = 0;
+let wantedTimer = 0;
+let patrolCar = null;
+let patrolSirenTime = 0;
 const fuelStationPosition = new THREE.Vector3(-18, 0, 0);
 let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionStage = 0, missionPulse = 0;
 let dialogueActionHandler = null;
@@ -36,6 +40,7 @@ const apartmentDoorPosition = new THREE.Vector3(16, 0, -6.5);
 const shopPosition = new THREE.Vector3(39.5, 0, 16);
 const traffic = [];
 const pedestrians = [];
+const patrolLights = [];
 const buildingBounds = [];
 const keys = new Set();
 const world = { district: "Western Coast · Central District", cash: 2500, visited: false };
@@ -219,7 +224,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function refuelVehicle() {
  closeDialogue();
@@ -417,6 +422,44 @@ function makeShopAndLandmarks() {
  makeApartmentExterior();
 }
 
+function makePoliceCar() {
+ const car=new THREE.Group();
+ box(car,0,.72,0,1.9,.62,3.8,material(0xe8e9e5,.4));
+ box(car,0,1.34,-.18,1.52,.72,1.8,material(0x263a43,.28));
+ box(car,0,1.05,1.12,1.94,.16,.08,material(0x1d2b32));
+ for(const x of [-.98,.98])for(const z of [-1.2,1.2]){
+  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.22,12),material(0x171a1b));tire.rotation.z=Math.PI/2;tire.position.set(x,.42,z);car.add(tire);
+ }
+ const red=new THREE.Mesh(new THREE.BoxGeometry(.42,.14,.22),new THREE.MeshStandardMaterial({color:0xff2638,emissive:0x8c0712}));
+ const blue=new THREE.Mesh(new THREE.BoxGeometry(.42,.14,.22),new THREE.MeshStandardMaterial({color:0x287dff,emissive:0x092c8c}));
+ red.position.set(-.25,1.78,-.18);blue.position.set(.25,1.78,-.18);car.add(red,blue);
+ patrolLights.push(red,blue);
+ car.position.set(-78,0,-78);scene.add(car);return car;
+}
+function updatePolice(delta) {
+ if(!patrolCar)return;
+ patrolSirenTime+=delta;
+ const active=wantedLevel>0;
+ patrolLights.forEach((light,index)=>{light.visible=active&&Math.floor(patrolSirenTime*7)%2===index;});
+ if(!active){patrolCar.position.lerp(new THREE.Vector3(-78,0,-78),Math.min(1,delta*.8));return;}
+ const target=playerMode==="vehicle"?vehicle.position:player.position;
+ const dx=target.x-patrolCar.position.x,dz=target.z-patrolCar.position.z;
+ const distance=Math.hypot(dx,dz);
+ const heading=Math.atan2(dx,dz);
+ patrolCar.rotation.y=heading;
+ const pace=10+wantedLevel*3;
+ if(distance>2.8){patrolCar.position.x+=Math.sin(heading)*pace*delta;patrolCar.position.z+=Math.cos(heading)*pace*delta;}
+ if(distance<3.5){
+  world.cash=Math.max(0,world.cash-250);cashLabel.textContent=world.cash.toLocaleString();
+  wantedLevel=0;wantedTimer=0;updateWantedDisplay();
+  showDialogue("CITY POLICE","Officers caught up with you. A $250 traffic fine has been issued. Drive safely.","UNDERSTOOD",closeDialogue);
+  saveProgress();
+ }
+}
+function updateWantedDisplay() {
+ const label=document.querySelector("#wanted");
+ if(label)label.textContent=wantedLevel?"★".repeat(wantedLevel)+"☆".repeat(3-wantedLevel):"CLEAR";
+}
 function makeFuelStation() {
  const station=new THREE.Group();station.position.set(-18,0,0);
  box(station,0,.18,0,15,.36,12,material(0x777b72),false);
@@ -497,6 +540,7 @@ function buildWorld() {
   shore.rotation.x = -Math.PI / 2; shore.position.set(0, -.01, -112); scene.add(shore);
   makeShopAndLandmarks();
   makeFuelStation();
+  patrolCar=makePoliceCar();
   vehicle = makeCar();
   populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
@@ -508,6 +552,8 @@ function buildWorld() {
 function update(delta) {
  if(!running||paused)return;
  updateAmbientLife(delta);
+ updatePolice(delta);
+ if(wantedLevel>0){wantedTimer-=delta;if(wantedTimer<=0){wantedLevel=0;updateWantedDisplay();}}
  if(playerMode==="vehicle"){
   const f=keys.has("KeyW")||keys.has("ArrowUp"),r=keys.has("KeyS")||keys.has("ArrowDown");
   const l=keys.has("KeyA")||keys.has("ArrowLeft"),q=keys.has("KeyD")||keys.has("ArrowRight");
@@ -520,6 +566,7 @@ function update(delta) {
   vehicle.position.addScaledVector(dir,speed*delta); vehicle.position.x=clamp(vehicle.position.x,-112,112); vehicle.position.z=clamp(vehicle.position.z,-105,112);
   if(collidesWithBuilding(vehicle.position)){vehicle.position.copy(prev);speed=0;}
   for(const car of traffic)if(vehicle.position.distanceTo(car.mesh.position)<2.2){vehicle.position.copy(prev);speed=0;break;}
+  for(const person of pedestrians)if(vehicle.position.distanceTo(person.mesh.position)<1.9&&Math.abs(speed)>7&&!person.reported){person.reported=true;wantedLevel=Math.min(3,wantedLevel+1);wantedTimer=55;updateWantedDisplay();showDialogue("CITY POLICE","A patrol has been alerted after a dangerous collision. Leave the area or wait for the pursuit to end.","DRIVE",closeDialogue);saveProgress();break;}
   player.position.copy(vehicle.position);
   const offset=new THREE.Vector3(0,7.2,-12).applyAxisAngle(new THREE.Vector3(0,1,0),vehicle.rotation.y);
   camera.position.lerp(vehicle.position.clone().add(offset),1-Math.pow(.001,delta)); camera.lookAt(vehicle.position.x,1.1,vehicle.position.z);
@@ -567,6 +614,7 @@ function drawMinimap() {
   dot(-48,48,"#85c6d0",4); // Civic tower
   dot(16,-16,"#d8b36a",4); // Apartment
   dot(-18,0,"#e28b55",4); // CROWNLINE Fuel
+  dot(-78,-78,"#7da7e8",4); // Police patrol base
   if (missionMarker?.visible) dot(missionMarker.position.x, missionMarker.position.z, "#f0d078",4);
   dot(center.x,center.z,"#ffffff",4);
   ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.strokeRect(.5,.5,w-1,h-1);
@@ -616,7 +664,7 @@ try {
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
+      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
