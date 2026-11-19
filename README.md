@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 1.2 health, inventory and clinic
+## Current milestone — 1.3 security contract and non-lethal combat
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -33,6 +33,10 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Press **I** to inspect the inventory, including health, fuel and Field Kit count. Use a Field Kit from the inventory to restore up to 40 health.
 - Added a Community Clinic landmark. On foot, press **E** near the entrance to purchase full treatment for $150.
 - Health and inventory supplies are saved locally, and older saves load with default full health.
+- Added a police station landmark and a City Police officer who offers a security contract.
+- Accepting the contract equips a visible non-lethal stun baton and spawns three suspects at the service yard.
+- Press **G** while on foot and within range to safely restrain a suspect. Suspects pursue the player and can cause health damage at close range.
+- Restraining all three suspects completes the contract and awards $1,200. Contract progress, baton ownership and remaining targets are saved; partial contracts resume with the correct remaining target count.
 - Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
@@ -50,6 +54,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 - **W / A / S / D** or arrow keys — drive and steer
 - **F** — enter or exit vehicle
 - **I** — open inventory and use a Field Kit.
+- **G** — use the non-lethal stun baton during an active security contract.
 - **E** — talk to mission characters, enter the market or apartment, refuel at the station, shop, and use home furniture while on foot
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
