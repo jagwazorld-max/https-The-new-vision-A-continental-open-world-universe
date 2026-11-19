@@ -9,6 +9,7 @@ const errorMessage = document.querySelector("#error-message");
 const cashLabel = document.querySelector("#cash");
 const speedLabel = document.querySelector("#speed");
 const fuelLabel = document.querySelector("#fuel");
+const healthLabel = document.querySelector("#health");
 const objectiveLabel = document.querySelector("#objective");
 const dialoguePanel = document.querySelector("#dialogue");
 const dialogueSpeaker = document.querySelector("#dialogue-speaker");
@@ -22,6 +23,9 @@ let running = false;
 let paused = false;
 let speed = 0;
 let fuel = 100;
+let health = 100;
+const healthCapacity = 100;
+const hospitalPosition = new THREE.Vector3(64,0,-40);
 const fuelCapacity = 100;
 let wantedLevel = 0;
 let wantedTimer = 0;
@@ -224,7 +228,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function refuelVehicle() {
  closeDialogue();
@@ -283,6 +287,34 @@ function buyFieldKit() {
  showDialogue("CORNER MARKET","Field kit purchased. It has been added to your local save.","GOT IT",closeDialogue);
  saveProgress();
 }
+function useFieldKit() {
+ closeDialogue();
+ if(world.supplies<1){showDialogue("INVENTORY","You do not have a Field Kit. Buy one from Corner Market.","CLOSE",closeDialogue);return;}
+ if(health>=healthCapacity){showDialogue("INVENTORY","Your health is already full.","CLOSE",closeDialogue);return;}
+ world.supplies-=1;health=Math.min(healthCapacity,health+40);healthLabel.textContent=Math.round(health)+"%";
+ showDialogue("FIELD KIT USED","You recovered 40 health. Remaining Field Kits: "+world.supplies+".","CONTINUE",closeDialogue);saveProgress();
+}
+function openInventory() {
+ showDialogue("PLAYER INVENTORY","HEALTH: "+Math.round(health)+" / 100\nFIELD KITS: "+world.supplies+"\nFUEL: "+Math.round(fuel)+"%\nYour Field Kits restore up to 40 health.","USE FIELD KIT",useFieldKit);
+}
+function visitHospital() {
+ closeDialogue();
+ if(health>=healthCapacity){showDialogue("CROWNLINE COMMUNITY CLINIC","You are already in good health. Take care out there.","CLOSE",closeDialogue);return;}
+ if(world.cash<150){showDialogue("CROWNLINE COMMUNITY CLINIC","Treatment costs $150. You do not have enough cash.","CLOSE",closeDialogue);return;}
+ world.cash-=150;health=healthCapacity;cashLabel.textContent=world.cash.toLocaleString();healthLabel.textContent="100%";
+ showDialogue("CROWNLINE COMMUNITY CLINIC","Treatment complete. Your health is fully restored.","DONE",closeDialogue);saveProgress();
+}
+function damagePlayer(amount) {
+ health=Math.max(0,health-amount);healthLabel.textContent=Math.round(health)+"%";
+ if(health===0){
+  health=healthCapacity;world.cash=Math.max(0,world.cash-100);cashLabel.textContent=world.cash.toLocaleString();
+  if(homeSpawn){player.position.set(homeSpawn[0],homeSpawn[1],homeSpawn[2]);}
+  else player.position.set(64,0,-40);
+  if(playerMode==="vehicle"){vehicle.position.copy(player.position);speed=0;}
+  else avatar.position.copy(player.position);
+  healthLabel.textContent="100%";showDialogue("RECOVERY","You were taken to the community clinic. Recovery costs $100.","CONTINUE",closeDialogue);saveProgress();
+ }
+}
 function interact() {
  if(playerMode!=="foot")return;
  if(inApartment) {
@@ -314,6 +346,9 @@ function interact() {
    showDialogue("CORNER MARKET · SHELF","Field Kit · $250. A compact kit for your travels.","BUY FIELD KIT · $250",buyFieldKit); return;
   }
   return;
+ }
+ if(player.position.distanceTo(hospitalPosition)<7) {
+  showDialogue("CROWNLINE COMMUNITY CLINIC","Medical treatment restores your health to 100%. Treatment fee: $150. Current health: "+Math.round(health)+"%.","GET TREATMENT · $150",visitHospital);return;
  }
  if(player.position.distanceTo(fuelStationPosition)<5.5) {
   showDialogue("CROWNLINE FUEL STOP","Fuel top-up: $100 for up to 25% tank capacity. Current fuel: "+Math.round(fuel)+"%.","REFUEL · $100",refuelVehicle);return;
@@ -422,6 +457,18 @@ function makeShopAndLandmarks() {
  makeApartmentExterior();
 }
 
+function makeHospital() {
+ const clinic=new THREE.Group();clinic.position.set(64,0,-48);
+ box(clinic,0,4.2,0,14,8.4,10,material(0xd8d8cc));
+ box(clinic,0,8.55,0,14.5,.3,10.5,material(0x3b555c),false);
+ box(clinic,0,1.55,5.08,2.8,3.1,.16,material(0x496b76),false);
+ box(clinic,-4,3.5,5.08,2.1,1.6,.12,material(0x426b75),false);
+ const c=document.createElement("canvas");c.width=512;c.height=128;const ctx=c.getContext("2d");ctx.fillStyle="#f1eee5";ctx.fillRect(0,0,512,128);ctx.fillStyle="#a33c39";ctx.font="900 62px sans-serif";ctx.textAlign="center";ctx.fillText("COMMUNITY CLINIC",256,82);
+ const sign=new THREE.Mesh(new THREE.PlaneGeometry(7.5,1.85),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)}));sign.position.set(0,6.6,5.12);clinic.add(sign);
+ box(clinic,0,4.6,5.18,1.1,1.1,.1,material(0xb84b45),false);box(clinic,0,4.6,5.25,.28,1.55,.12,material(0xf3eee4),false);box(clinic,0,4.6,5.26,1.55,.28,.12,material(0xf3eee4),false);
+ scene.add(clinic);buildingBounds.push({minX:56.5,maxX:71.5,minZ:-53.5,maxZ:-42.5});
+ makeStaticNpc(64,-39,0x5e8b84);
+}
 function makePoliceCar() {
  const car=new THREE.Group();
  box(car,0,.72,0,1.9,.62,3.8,material(0xe8e9e5,.4));
@@ -540,6 +587,7 @@ function buildWorld() {
   shore.rotation.x = -Math.PI / 2; shore.position.set(0, -.01, -112); scene.add(shore);
   makeShopAndLandmarks();
   makeFuelStation();
+  makeHospital();
   patrolCar=makePoliceCar();
   vehicle = makeCar();
   populateLife();
@@ -580,7 +628,7 @@ function update(delta) {
   player.position.addScaledVector(dir,((f?1:0)-(b?1:0))*pace*delta);
   player.position.x=clamp(player.position.x,-112,112);player.position.z=clamp(player.position.z,-105,112);
   if(inApartment ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
-  for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45)player.position.copy(prev);
+  for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45){player.position.copy(prev);damagePlayer(12);break;}
   avatar.position.copy(player.position);avatar.rotation.y=player.heading;
   const moving=f||b;avatar.userData.limbs.forEach((limb,i)=>{const swing=moving?Math.sin(clock.elapsedTime*(pace>6?11:7))*.42:0;limb.rotation.x=swing*(i%2?-1:1);});
   const offset=new THREE.Vector3(0,5.2,-8.5).applyAxisAngle(new THREE.Vector3(0,1,0),player.heading);
@@ -615,6 +663,7 @@ function drawMinimap() {
   dot(16,-16,"#d8b36a",4); // Apartment
   dot(-18,0,"#e28b55",4); // CROWNLINE Fuel
   dot(-78,-78,"#7da7e8",4); // Police patrol base
+  dot(64,-48,"#e28b8b",4); // Community clinic
   if (missionMarker?.visible) dot(missionMarker.position.x, missionMarker.position.z, "#f0d078",4);
   dot(center.x,center.z,"#ffffff",4);
   ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.strokeRect(.5,.5,w-1,h-1);
@@ -643,6 +692,7 @@ window.addEventListener("keydown", event => {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) event.preventDefault();
   keys.add(event.code);
   if (event.code === "Escape" && running) setPaused(!paused);
+  if (!event.repeat && event.code === "KeyI" && running && !paused && dialoguePanel.classList.contains("hidden")) openInventory();
   if (!event.repeat && event.code === "KeyF" && running && !paused) { if(playerMode==="vehicle") exitVehicle(); else enterVehicle(); }
   if (!event.repeat && event.code === "KeyE" && running && !paused && dialoguePanel.classList.contains("hidden")) interact();
 });
@@ -664,7 +714,7 @@ try {
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
+      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";health=Number.isFinite(saved.health)?clamp(saved.health,0,healthCapacity):health;healthLabel.textContent=Math.round(health)+"%";wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
