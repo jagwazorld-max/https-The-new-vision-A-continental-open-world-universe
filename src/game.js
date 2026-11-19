@@ -14,6 +14,9 @@ let scene, camera, renderer, player, vehicle, clock;
 let running = false;
 let paused = false;
 let speed = 0;
+const traffic = [];
+const pedestrians = [];
+const buildingBounds = [];
 const keys = new Set();
 const world = { district: "Western Coast · Central District", cash: 2500, visited: false };
 const clamp = THREE.MathUtils.clamp;
@@ -51,6 +54,7 @@ function makeBuilding(x, z, w, d, h, seed) {
     }
   }
   scene.add(group);
+  buildingBounds.push({ minX: x - w / 2 - 1.4, maxX: x + w / 2 + 1.4, minZ: z - d / 2 - 1.8, maxZ: z + d / 2 + 1.8 });
 }
 function makeTree(x, z, scale = 1) {
   const group = new THREE.Group();
@@ -90,6 +94,62 @@ function makeCar() {
   group.position.set(0, 0, 9);
   scene.add(group);
   return group;
+}
+function makeTrafficCar(x, z, heading, color) {
+  const group = new THREE.Group();
+  const paint = material(color, .42);
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(1.7, .58, 3.25), paint);
+  shell.position.y = .68; shell.castShadow = true; group.add(shell);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.35, .62, 1.55), material(0x263b45, .3));
+  cabin.position.set(0, 1.24, -.15); group.add(cabin);
+  const tireMat = material(0x17191a);
+  for (const tx of [-.88, .88]) for (const tz of [-1.05, 1.05]) {
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .18, 10), tireMat);
+    tire.rotation.z = Math.PI / 2; tire.position.set(tx, .35, tz); group.add(tire);
+  }
+  group.position.set(x, 0, z); group.rotation.y = heading; scene.add(group);
+  return { mesh: group, direction: heading === 0 ? 1 : -1, laneX: x, pace: 7 + Math.random() * 5 };
+}
+function makePedestrian(x, z, phase) {
+  const group = new THREE.Group();
+  const skin = material([0x754b35, 0x9a6749, 0x593b2c, 0xb17d58][phase % 4]);
+  const clothes = material([0x9b5b36, 0x315b58, 0x9a884d, 0x3f4e70][phase % 4]);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(.22, .62, 3, 7), clothes);
+  body.position.y = .78; body.castShadow = true; group.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.19, 10, 8), skin);
+  head.position.y = 1.35; head.castShadow = true; group.add(head);
+  group.position.set(x, 0, z); scene.add(group);
+  return { mesh: group, originX: x, originZ: z, phase: phase * 1.7, pace: .45 + (phase % 3) * .12 };
+}
+function populateLife() {
+  const colors = [0x9b4938, 0x426d80, 0x777b55, 0xd0b06b, 0x3f4449, 0x8b6d91];
+  for (const lane of [-64, -32, 32, 64]) {
+    traffic.push(makeTrafficCar(lane - 3.1, -95, 0, colors[traffic.length % colors.length]));
+    traffic.push(makeTrafficCar(lane + 3.1, 95, Math.PI, colors[traffic.length % colors.length]));
+  }
+  for (let i = 0; i < 22; i++) {
+    const roadIndex = Math.floor(i / 6) - 1;
+    const roadX = roadIndex * 32;
+    const side = i % 2 ? 1 : -1;
+    const z = -88 + (i * 17) % 176;
+    pedestrians.push(makePedestrian(roadX + side * 8.2, z, i));
+  }
+}
+function collidesWithBuilding(position) {
+  return buildingBounds.some(b => position.x > b.minX && position.x < b.maxX && position.z > b.minZ && position.z < b.maxZ);
+}
+function updateAmbientLife(delta) {
+  for (const car of traffic) {
+    car.mesh.position.z += car.direction * car.pace * delta;
+    if (car.mesh.position.z > 118) car.mesh.position.z = -118;
+    if (car.mesh.position.z < -118) car.mesh.position.z = 118;
+  }
+  for (const person of pedestrians) {
+    const t = clock.elapsedTime * person.pace + person.phase;
+    person.mesh.position.x = person.originX + Math.sin(t) * 1.6;
+    person.mesh.position.z = person.originZ + Math.cos(t * .7) * 2.8;
+    person.mesh.rotation.y = Math.atan2(Math.cos(t), -Math.sin(t * .7));
+  }
 }
 function buildWorld() {
   scene = new THREE.Scene();
@@ -151,6 +211,7 @@ function buildWorld() {
   const shore = new THREE.Mesh(new THREE.PlaneGeometry(240, 12), material(0xc2ad82));
   shore.rotation.x = -Math.PI / 2; shore.position.set(0, -.01, -112); scene.add(shore);
   vehicle = makeCar();
+  populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
   clock = new THREE.Clock();
 }
@@ -166,9 +227,22 @@ function update(delta) {
   const steer = (right ? 1 : 0) - (left ? 1 : 0);
   if (Math.abs(speed) > .25) vehicle.rotation.y -= steer * delta * 1.7 * Math.sign(speed) * Math.min(1, Math.abs(speed) / 8);
   const direction = new THREE.Vector3(Math.sin(vehicle.rotation.y), 0, Math.cos(vehicle.rotation.y));
+  const previousPosition = vehicle.position.clone();
   vehicle.position.addScaledVector(direction, speed * delta);
   vehicle.position.x = clamp(vehicle.position.x, -112, 112);
   vehicle.position.z = clamp(vehicle.position.z, -105, 112);
+  if (collidesWithBuilding(vehicle.position)) {
+    vehicle.position.copy(previousPosition);
+    speed = 0;
+  }
+  for (const car of traffic) {
+    if (vehicle.position.distanceTo(car.mesh.position) < 3.15) {
+      vehicle.position.copy(previousPosition);
+      speed = 0;
+      break;
+    }
+  }
+  updateAmbientLife(delta);
   player.position.copy(vehicle.position);
   const cameraOffset = new THREE.Vector3(0, 7.2, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), vehicle.rotation.y);
   const desired = vehicle.position.clone().add(cameraOffset);
