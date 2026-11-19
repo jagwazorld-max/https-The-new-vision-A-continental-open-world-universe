@@ -20,6 +20,9 @@ const minimapContext = minimapCanvas?.getContext("2d");
 
 let scene, camera, renderer, player, vehicle, clock;
 let cameraPitch = 0, cameraYaw = 0;
+let worldTime = 0.28;
+let sunLight = null, hemiLight = null;
+const clockLabel = document.querySelector("#world-clock");
 let running = false;
 let paused = false;
 let speed = 0;
@@ -289,7 +292,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,securityMissionActive,securityMissionComplete,hasStunBaton,securityTargetsRemaining,npcDialogueIndex, inPoliceStation:inPoliceStation && playerMode==="foot",activeCityContract,contractRecovered,completedCityContracts:[...completedCityContracts],wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,worldTime,securityMissionActive,securityMissionComplete,hasStunBaton,securityTargetsRemaining,npcDialogueIndex, inPoliceStation:inPoliceStation && playerMode==="foot",activeCityContract,contractRecovered,completedCityContracts:[...completedCityContracts],wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function refuelVehicle() {
  closeDialogue();
@@ -685,9 +688,11 @@ function buildWorld() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
-  const hemi = new THREE.HemisphereLight(0xe6f0ef, 0x6d604b, 2.1);
+  hemiLight = new THREE.HemisphereLight(0xe6f0ef, 0x6d604b, 2.1);
+  const hemi = hemiLight;
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffe0b3, 3.1);
+  sunLight = new THREE.DirectionalLight(0xffe0b3, 3.1);
+  const sun = sunLight;
   sun.position.set(-35, 65, 25);
   sun.castShadow = true;
   sun.shadow.mapSize.set(isTouchDevice?1024:2048, isTouchDevice?1024:2048);
@@ -750,8 +755,31 @@ function buildWorld() {
   clock = new THREE.Clock();
 }
 
+function updateWorldLighting(delta) {
+  worldTime = (worldTime + delta / 720) % 1;
+  const angle = worldTime * Math.PI * 2 - Math.PI / 2;
+  const daylight = THREE.MathUtils.clamp((Math.sin(angle) + .12) / .72, 0, 1);
+  const dusk = 1 - Math.min(1, Math.abs(daylight - .48) / .48);
+  const night = 1 - daylight;
+  const skyDay = new THREE.Color(0x9cb6c0);
+  const skyDusk = new THREE.Color(0xd18a66);
+  const skyNight = new THREE.Color(0x101a2b);
+  const sky = daylight > .05 ? new THREE.Color().lerpColors(skyNight, skyDay, daylight) : skyNight.clone();
+  sky.lerp(skyDusk, dusk * .32);
+  scene.background.copy(sky);
+  scene.fog.color.copy(sky);
+  sunLight.intensity = .12 + daylight * 3.0;
+  sunLight.color.setRGB(1, .68 + daylight * .2, .48 + daylight * .38);
+  sunLight.position.set(Math.cos(angle) * 75, Math.max(8, Math.sin(angle) * 85), 25);
+  hemiLight.intensity = .42 + daylight * 1.7;
+  renderer.toneMappingExposure = .82 + daylight * .3;
+  const hour = Math.floor(worldTime * 24);
+  const minute = Math.floor((worldTime * 24 - hour) * 60);
+  if (clockLabel) clockLabel.textContent = String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0");
+}
 function update(delta) {
  if(!running||paused)return;
+ updateWorldLighting(delta);
  updateAmbientLife(delta);
  updatePolice(delta);
  updateSecurity(delta);
@@ -930,7 +958,7 @@ try {
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";health=Number.isFinite(saved.health)?clamp(saved.health,0,healthCapacity):health;healthLabel.textContent=Math.round(health)+"%";securityMissionActive=Boolean(saved.securityMissionActive);securityMissionComplete=Boolean(saved.securityMissionComplete);hasStunBaton=Boolean(saved.hasStunBaton);securityTargetsRemaining=Number.isFinite(saved.securityTargetsRemaining)?clamp(saved.securityTargetsRemaining,0,3):0;if(avatar?.userData.stunBaton)avatar.userData.stunBaton.visible=hasStunBaton;if(securityMissionActive)spawnSecurityTargets();wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
+      world.cash=Number(saved.cash)||2500;worldTime=Number.isFinite(saved.worldTime)?((saved.worldTime%1)+1)%1:worldTime;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";health=Number.isFinite(saved.health)?clamp(saved.health,0,healthCapacity):health;healthLabel.textContent=Math.round(health)+"%";securityMissionActive=Boolean(saved.securityMissionActive);securityMissionComplete=Boolean(saved.securityMissionComplete);hasStunBaton=Boolean(saved.hasStunBaton);securityTargetsRemaining=Number.isFinite(saved.securityTargetsRemaining)?clamp(saved.securityTargetsRemaining,0,3):0;if(avatar?.userData.stunBaton)avatar.userData.stunBaton.visible=hasStunBaton;if(securityMissionActive)spawnSecurityTargets();wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
