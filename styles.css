@@ -2,3 +2,6 @@
 .dialogue{position:absolute;z-index:7;left:50%;bottom:86px;transform:translateX(-50%);width:min(560px,calc(100% - 32px));pointer-events:auto;background:rgba(7,13,18,.94);border:1px solid #d8b36a66;border-top:2px solid var(--gold);padding:20px 24px;backdrop-filter:blur(16px);box-shadow:0 18px 60px #0008}.dialogue-inner{display:flex;flex-direction:column;gap:10px}.dialogue-inner strong{font:800 24px "Barlow Condensed",sans-serif;letter-spacing:1px}.dialogue-inner p{margin:0 0 8px;color:#c4ccce;font-size:12px;line-height:1.7}.dialogue-inner .primary-button{align-self:flex-start;padding:13px 18px}@media(max-width:650px){.dialogue{bottom:66px;padding:16px}.dialogue-inner strong{font-size:21px}.dialogue-inner p{font-size:11px}.dialogue-inner .primary-button{font-size:9px}}
 
 /* ALPHA 0.5 city interaction polish */
+
+/* ALPHA 0.6 live district minimap */
+.minimap-wrap{position:absolute;right:4.2vw;bottom:78px;width:160px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}.minimap-wrap span{font-size:8px;letter-spacing:2px;color:#e0c58d}#minimap{width:160px;height:160px;border:1px solid #d8b36a88;box-shadow:0 8px 28px #0008;background:#080d13}@media(max-width:650px){.minimap-wrap{right:14px;bottom:72px;width:112px}#minimap{width:112px;height:112px}}
