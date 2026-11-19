@@ -338,6 +338,7 @@ function populateLife() {
     person.crossingZ = z;
     person.crossingProgress = 0;
     person.crossingWait = side < 0 ? 0 : 3;
+    pedestrians.push(person);
   }
 }
 function collidesWithBuilding(position) {
