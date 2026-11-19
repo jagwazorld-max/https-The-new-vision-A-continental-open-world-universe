@@ -19,7 +19,7 @@
     <canvas id="world" aria-label="CROWNLINE 3D game world"></canvas>
     <div class="topbar">
       <a class="brand" href="#" aria-label="CROWNLINE home"><span class="brand-mark">C</span><span>CROWNLINE<small>THE NEW VISION</small></span></a>
-      <div class="top-status"><span class="live-dot"></span> WORLD SIMULATION <b>ALPHA 1.6</b></div>
+      <div class="top-status"><span class="live-dot"></span> WORLD SIMULATION <b>ALPHA 1.8</b></div>
       <button id="pause-button" class="icon-button" aria-label="Pause game">Ⅱ</button>
     </div>
     <section id="intro" class="overlay intro">
@@ -43,8 +43,8 @@
       <div class="hud-right"><div class="district-label">WESTERN COAST <b>·</b> CENTRAL DISTRICT</div><div class="cash">$ <span id="cash">2,500</span></div><div class="district-label">FUEL <b id="fuel">100%</b></div><div class="district-label">WANTED <b id="wanted">CLEAR</b></div><div class="district-label">HEALTH <b id="health">100%</b></div><div class="speed"><span id="speed">0</span><small>KM/H</small></div></div>
       <div class="controls-hint desktop-controls">W A S D <span>MOVE / DRIVE</span> &nbsp; F <span>ENTER / EXIT</span> &nbsp; E <span>INTERACT</span> &nbsp; I <span>INVENTORY</span> &nbsp; G <span>STUN</span> &nbsp; SHIFT <span>SPRINT</span> &nbsp; SPACE <span>BRAKE</span></div>
       <div id="touch-controls" class="touch-controls" aria-label="Touch game controls">
-        <div class="touch-pad"><button data-hold="KeyW" aria-label="Move forward">▲</button><div><button data-hold="KeyA" aria-label="Move left">◀</button><button data-hold="KeyS" aria-label="Move backward">▼</button><button data-hold="KeyD" aria-label="Move right">▶</button></div></div>
-        <div class="touch-actions"><button data-tap="KeyE">E<br><small>USE</small></button><button data-tap="KeyF">F<br><small>CAR</small></button><button data-hold="ShiftLeft">RUN</button><button data-tap="KeyI">BAG</button><button data-tap="KeyG">STUN</button></div>
+        <div class="touch-stick" id="move-stick" aria-label="Virtual movement joystick"><div class="touch-stick-ring"><div class="touch-stick-knob" id="move-knob"></div></div></div>
+        <div id="camera-look" class="camera-look" aria-label="Swipe to look around"></div><div class="touch-actions"><button data-tap="KeyE">E<br><small>USE</small></button><button data-tap="KeyF">F<br><small>CAR</small></button><button data-hold="ShiftLeft">RUN</button><button data-tap="KeyI">BAG</button><button data-tap="KeyG">STUN</button></div>
       </div>
     </div>
     <section id="dialogue" class="dialogue hidden" aria-live="polite"><div class="dialogue-inner"><span class="eyebrow">CROWNLINE · STORY</span><strong id="dialogue-speaker">CONTACT</strong><p id="dialogue-text"></p><button id="dialogue-action" class="primary-button">CONTINUE</button></div></section>
