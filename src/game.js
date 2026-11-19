@@ -44,6 +44,16 @@ let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete
 let dialogueActionHandler = null;
 let inShop = false;
 let inApartment = false;
+let inPoliceStation = false;
+let contractMarker = null;
+let activeCityContract = -1;
+let selectedCityContract = 0;
+let contractRecovered = false;
+const completedCityContracts = new Set();
+const cityContracts = [
+ {name:"LOST EVIDENCE",detail:"Recover a missing evidence case from the old service yard.",x:-42,z:30,reward:650},
+ {name:"COMMUNITY SUPPLIES",detail:"Collect a sealed supply pack from the eastern depot.",x:50,z:-64,reward:850}
+];
 let ownsApartment = false;
 let homeSpawn = null;
 let homeUpgrades = { television: false, plant: false, artwork: false };
@@ -237,7 +247,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,securityMissionActive,securityMissionComplete,hasStunBaton,securityTargetsRemaining,wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,securityMissionActive,securityMissionComplete,hasStunBaton,securityTargetsRemaining,inPoliceStation:inPoliceStation && playerMode==="foot",activeCityContract,contractRecovered,completedCityContracts:[...completedCityContracts],wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function refuelVehicle() {
  closeDialogue();
@@ -372,6 +382,21 @@ function damagePlayer(amount) {
 }
 function interact() {
  if(playerMode!=="foot")return;
+ if(inPoliceStation){
+  if(player.position.distanceTo(new THREE.Vector3(0,-110,6))<3.5){inPoliceStation=false;player.position.set(-80,0,-40);avatar.position.copy(player.position);showDialogue("CITY POLICE","You are back outside the district police station.","CLOSE",closeDialogue);saveProgress();return;}
+  if(player.position.distanceTo(new THREE.Vector3(4,-110,-5))<4){
+   if(activeCityContract>=0){const c=cityContracts[activeCityContract];if(contractRecovered){world.cash+=c.reward;cashLabel.textContent=world.cash.toLocaleString();completedCityContracts.add(activeCityContract);activeCityContract=-1;contractRecovered=false;contractMarker.visible=false;objectiveLabel.textContent="District contract completed · $"+c.reward+" earned";showDialogue("CITY POLICE","Report received. Your $"+c.reward+" payment has been transferred.","COLLECT PAYMENT",closeDialogue);saveProgress();}else showDialogue("DISTRICT OPERATIONS",c.name+" is active. Travel to the gold marker, recover the assignment item, then return here. Reward: $"+c.reward+".","UNDERSTOOD",closeDialogue);return;}
+   const available=cityContracts.map((c,i)=>completedCityContracts.has(i)?null:i).filter(i=>i!==null);
+   if(!available.length){showDialogue("DISTRICT OPERATIONS","All available district contracts have been completed. More assignments will arrive in a future update.","CLOSE",closeDialogue);return;}
+   if(!available.includes(selectedCityContract))selectedCityContract=available[0];
+   const c=cityContracts[selectedCityContract];
+   showDialogue("MISSION SELECTION · "+c.name,c.detail+" Reward: $"+c.reward+". Browse assignments, then accept the selected contract.","NEXT CONTRACT",()=>{const list=cityContracts.map((v,i)=>completedCityContracts.has(i)?null:i).filter(i=>i!==null);if(!list.length){closeDialogue();return;}const at=list.indexOf(selectedCityContract);selectedCityContract=list[(at+1)%list.length];const next=cityContracts[selectedCityContract];showDialogue("MISSION SELECTION · "+next.name,next.detail+" Reward: $"+next.reward+". Select ACCEPT to begin.","ACCEPT CONTRACT",()=>{activeCityContract=selectedCityContract;contractRecovered=false;contractMarker.position.set(next.x,0,next.z);contractMarker.visible=true;objectiveLabel.textContent=next.name+": travel to the marked location and return to the police station";closeDialogue();saveProgress();});});
+   return;
+  }
+  if(player.position.distanceTo(new THREE.Vector3(-5,-110,-3))<4){showDialogue("RECEPTION","Welcome to the Central District Police Station. The operations board lists available civilian assistance contracts.","CLOSE",closeDialogue);return;}
+  return;
+ }
+ if(player.position.distanceTo(new THREE.Vector3(-80,0,-40))<4.5){closeDialogue();inPoliceStation=true;inShop=false;inApartment=false;player.position.set(0,-110,6);avatar.position.copy(player.position);avatar.visible=true;showDialogue("CENTRAL DISTRICT POLICE","Welcome inside. Visit the operations board to choose a local assignment.","ENTER",closeDialogue);saveProgress();return;}
  if(inApartment) {
   if(player.position.distanceTo(new THREE.Vector3(0,-80,6))<3.5) {
    inApartment=false; player.position.set(16,0,-6.5); avatar.position.copy(player.position);
@@ -403,6 +428,7 @@ function interact() {
   return;
  }
  if(player.position.distanceTo(securityOfficerPosition)<6) {startSecurityMission();return;}
+ if(activeCityContract>=0 && player.position.distanceTo(contractMarker.position)<5){contractRecovered=true;const c=cityContracts[activeCityContract];showDialogue("ASSIGNMENT RECOVERED",c.name+" objective secured. Return to the police station operations board to file the report and collect $"+c.reward+".","RETURN TO STATION",closeDialogue);saveProgress();return;}
  if(player.position.distanceTo(hospitalPosition)<7) {
   showDialogue("CROWNLINE COMMUNITY CLINIC","Medical treatment restores your health to 100%. Treatment fee: $150. Current health: "+Math.round(health)+"%.","GET TREATMENT · $150",visitHospital);return;
  }
@@ -534,6 +560,17 @@ function makePoliceStation() {
  scene.add(station);buildingBounds.push({minX:-88.2,maxX:-71.8,minZ:-54,maxZ:-42});
  makeStaticNpc(-80,-35,0x344b75);
 }
+function makePoliceInterior() {
+ const room=new THREE.Group();room.position.y=-110;
+ box(room,0,-.18,0,18,.35,16,material(0x59636a),false);
+ const wall=material(0xb7c1c2);
+ box(room,0,2.5,-8,18,5,.35,wall);box(room,-9,2.5,0,.35,5,16,wall);box(room,9,2.5,0,.35,5,16,wall);box(room,0,2.5,8,18,5,.35,wall);
+ box(room,0,4.95,0,18,.25,16,material(0x263746),false);
+ box(room,-5,.65,-3,5,1.3,1.4,material(0x394b55));box(room,-5,1.4,-3,5.1,.12,1.5,material(0x9ba7a5));
+ box(room,4,1.25,-5,6,2.5,.5,material(0x344b59));box(room,4,2.7,-4.7,4.8,.6,.15,material(0xd8b36a));box(room,0,.65,3,5,1.3,1.2,material(0x4a5155));
+ const c=document.createElement("canvas");c.width=512;c.height=128;const ctx=c.getContext("2d");ctx.fillStyle="#203747";ctx.fillRect(0,0,512,128);ctx.fillStyle="#e8d7a8";ctx.font="900 54px sans-serif";ctx.textAlign="center";ctx.fillText("DISTRICT OPERATIONS",256,82);
+ const sign=new THREE.Mesh(new THREE.PlaneGeometry(7,1.75),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)}));sign.position.set(0,3.5,-7.78);room.add(sign);scene.add(room);
+}
 function makePoliceCar() {
  const car=new THREE.Group();
  box(car,0,.72,0,1.9,.62,3.8,material(0xe8e9e5,.4));
@@ -654,11 +691,13 @@ function buildWorld() {
   makeFuelStation();
   makeHospital();
   makePoliceStation();
+  makePoliceInterior();
   patrolCar=makePoliceCar();
   vehicle = makeCar();
   populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
   avatar = makeAvatar(); missionMarker = makeMissionMarker();
+  contractMarker=makeMissionMarker();contractMarker.visible=false;
   makeStaticNpc(20,40,0x9b5b36); makeStaticNpc(-27,-42,0x315b58);
   clock = new THREE.Clock();
 }
@@ -694,7 +733,7 @@ function update(delta) {
   const dir=new THREE.Vector3(Math.sin(player.heading),0,Math.cos(player.heading)),prev=player.position.clone();
   player.position.addScaledVector(dir,((f?1:0)-(b?1:0))*pace*delta);
   player.position.x=clamp(player.position.x,-112,112);player.position.z=clamp(player.position.z,-105,112);
-  if(inApartment ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
+  if(inApartment ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : inPoliceStation ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
   for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45){player.position.copy(prev);damagePlayer(12);break;}
   avatar.position.copy(player.position);avatar.rotation.y=player.heading;
   const moving=f||b;avatar.userData.limbs.forEach((limb,i)=>{const swing=moving?Math.sin(clock.elapsedTime*(pace>6?11:7))*.42:0;limb.rotation.x=swing*(i%2?-1:1);});
@@ -733,6 +772,8 @@ function drawMinimap() {
   dot(64,-48,"#e28b8b",4); // Community clinic
   dot(-80,-48,"#7da7e8",4); // Police station
   if (missionMarker?.visible) dot(missionMarker.position.x, missionMarker.position.z, "#f0d078",4);
+  if(contractMarker?.visible) dot(contractMarker.position.x,contractMarker.position.z,"#7ed7b1",4);
+  if(contractMarker?.visible) dot(contractMarker.position.x,contractMarker.position.z,"#7ed7b1",4);
   dot(center.x,center.z,"#ffffff",4);
   ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.strokeRect(.5,.5,w-1,h-1);
   ctx.fillStyle="#d8b36a";ctx.font="bold 9px sans-serif";ctx.fillText("N",w-13,12);
@@ -793,9 +834,14 @@ try {
       homeSpawn=Array.isArray(saved.homeSpawn)?saved.homeSpawn:null;
       homeUpgrades={television:Boolean(saved.homeUpgrades?.television),plant:Boolean(saved.homeUpgrades?.plant),artwork:Boolean(saved.homeUpgrades?.artwork)};
       for(const name of Object.keys(homeUpgrades)) if(homeUpgradeMeshes[name]) homeUpgradeMeshes[name].visible=homeUpgrades[name];
-      if(saved.inApartment && playerMode==="foot"){inApartment=true;inShop=false;player.position.set(0,-80,6);avatar.position.copy(player.position);}
-      else if(saved.inShop && playerMode==="foot"){inShop=true;player.position.set(0,-50,6);avatar.position.copy(player.position);}
+      if(saved.inApartment && playerMode==="foot"){inApartment=true;inShop=false;inPoliceStation=false;player.position.set(0,-80,6);avatar.position.copy(player.position);}
+      else if(saved.inShop && playerMode==="foot"){inShop=true;inPoliceStation=false;player.position.set(0,-50,6);avatar.position.copy(player.position);}
+      else if(saved.inPoliceStation && playerMode==="foot"){inPoliceStation=true;player.position.set(0,-110,6);avatar.position.copy(player.position);}
       else if(homeSpawn && playerMode==="foot"){player.position.fromArray(homeSpawn);avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
+      contractRecovered=Boolean(saved.contractRecovered);
+      if(Array.isArray(saved.completedCityContracts))saved.completedCityContracts.forEach(i=>{if(Number.isInteger(i)&&i>=0&&i<cityContracts.length)completedCityContracts.add(i);});
+      activeCityContract=Number.isInteger(saved.activeCityContract)&&saved.activeCityContract>=0&&saved.activeCityContract<cityContracts.length?saved.activeCityContract:-1;
+      if(activeCityContract>=0){const c=cityContracts[activeCityContract];contractMarker.position.set(c.x,0,c.z);contractMarker.visible=true;objectiveLabel.textContent=c.name+": recover the assignment item and return to the police station";}
       if(missionStage===1)missionMarker.position.set(-25,0,-42);
       if(missionComplete||missionStage===2)missionMarker.visible=false;
       cashLabel.textContent=world.cash.toLocaleString();
