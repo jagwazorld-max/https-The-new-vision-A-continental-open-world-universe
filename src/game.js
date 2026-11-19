@@ -376,7 +376,7 @@ try {
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
       if(Number.isFinite(saved.playerHeading))player.heading=saved.playerHeading;
       if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
-      if(missionStage===1)missionMarker.position.set(-25,0,-32);
+      if(missionStage===1)missionMarker.position.set(-25,0,-42);
       if(missionComplete||missionStage===2)missionMarker.visible=false;
       cashLabel.textContent=world.cash.toLocaleString();
       if(missionStage===2)objectiveLabel.textContent="Delivery completed · $1,000 earned";
