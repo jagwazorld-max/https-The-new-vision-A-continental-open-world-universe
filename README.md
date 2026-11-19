@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 0.4 first story mission
+## Current milestone — 0.5 city landmarks and local commerce
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -16,6 +16,9 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - First two-step story mission: meet the waterfront contact, accept a supply delivery, then hand it to the dock worker.
 - Context dialogue panel with mission acceptance and completion actions.
 - Completing the delivery awards $1,000; mission stage and cash persist in the local save.
+- Added the named Corner Market storefront with a nearby shopkeeper and an on-foot interaction.
+- Players can purchase a Field Kit for $250; cash and owned kit count persist locally.
+- Added a distinctive civic clock tower as a visible district landmark with collision boundaries.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
 - Responsive title screen and local browser save for basic progress.
@@ -31,7 +34,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 
 - **W / A / S / D** or arrow keys — drive and steer
 - **F** — enter or exit vehicle
-- **E** — talk to the mission contact or dock worker while on foot
+- **E** — talk to mission characters or interact with Corner Market while on foot
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
 - **Esc** — pause or resume
@@ -46,7 +49,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 ## Roadmap
 
 1. Validate the 3D foundation and improve driving, collision and camera behaviour.
-2. Build a richer first city district with landmarks, pedestrians, traffic and mission interactions.
+2. Expand the first city district with more storefronts, interiors, landmarks and mission interactions.
 3. Add streamed world regions and a data-driven continent/city map.
 4. Add character systems, interiors, economy, progression, audio and save profiles.
 5. Evaluate multiplayer and expanded PC distribution after the core single-player experience is stable.
