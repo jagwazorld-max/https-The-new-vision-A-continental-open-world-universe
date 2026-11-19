@@ -231,6 +231,16 @@ function buyFieldKit() {
 }
 function interact() {
  if(playerMode!=="foot")return;
+ if(inShop) {
+  if(player.position.distanceTo(new THREE.Vector3(0,-50,6))<3.2) {
+   inShop=false; player.position.set(39.5,0,22.5); avatar.position.copy(player.position);
+   showDialogue("CORNER MARKET","You stepped back out onto the street.","CLOSE",closeDialogue); saveProgress(); return;
+  }
+  if(player.position.distanceTo(new THREE.Vector3(-4,-50,-1))<3.2 || player.position.distanceTo(new THREE.Vector3(4,-50,-1))<3.2) {
+   showDialogue("CORNER MARKET · SHELF","Field Kit · $250. A compact kit for your travels.","BUY FIELD KIT · $250",buyFieldKit); return;
+  }
+  return;
+ }
  if(!missionComplete && player.position.distanceTo(missionMarker.position)<4.5) {
   if(missionStage===0)showDialogue("THE WATERFRONT CONTACT","We need a sealed supply crate taken to our dock worker. The marked hand-off point is just across the district. Can you make the delivery?","ACCEPT DELIVERY");
   else if(missionStage===1)showDialogue("DOCK WORKER","That's the crate we were waiting for. The waterfront crew can take it from here. Thank you for getting it here safely.","COMPLETE DELIVERY · $1,000");
@@ -238,8 +248,23 @@ function interact() {
  }
  if(player.position.distanceTo(shopPosition)<4.8)showDialogue("CORNER MARKET","Welcome. Come inside and browse the shelves.","ENTER MARKET",()=>{ closeDialogue(); inShop=true; player.position.set(0,-50,6); avatar.position.copy(player.position); avatar.visible=true; player.heading=Math.PI; avatar.rotation.y=player.heading; saveProgress(); });
 }
+function makeShopInterior() {
+ const room=new THREE.Group(); room.position.y=-50;
+ box(room,0,-.18,0,16,.35,16,material(0x6e6b60),false);
+ const wall=material(0xb6a78e);
+ box(room,0,2.5,-8,16,5,.35,wall); box(room,-8,2.5,0,.35,5,16,wall); box(room,8,2.5,0,.35,5,16,wall); box(room,0,2.5,8,16,5,.35,wall);
+ box(room,0,4.95,0,16,.25,16,material(0x42494a),false);
+ for(const x of [-4,4]) {
+  box(room,x,1.35,-1,1.1,2.7,5.2,material(0x72563c));
+  for(let level=0;level<3;level++) box(room,x, .55+level*.82,-1,1.25,.12,5.35,material(0xc3a16a),false);
+  for(let n=0;n<4;n++) box(room,x+(n%2?-.25:.25),.85+Math.floor(n/2)*.82,-2.7+n*.95,.28,.38,.28,material([0x9c7042,0x557b75,0xb9a56e,0x8b554b][n]),false);
+ }
+ box(room,0,.65,5.6,5,.9,1.1,material(0x634a35));
+ const labelCanvas=document.createElement("canvas");labelCanvas.width=512;labelCanvas.height=128;const c=labelCanvas.getContext("2d");c.fillStyle="#17252a";c.fillRect(0,0,512,128);c.fillStyle="#e1bd78";c.font="bold 58px sans-serif";c.textAlign="center";c.fillText("WELCOME",256,82);
+ const label=new THREE.Mesh(new THREE.PlaneGeometry(5,1.25),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(labelCanvas)}));label.position.set(0,3.1,-7.78);room.add(label); scene.add(room);
+}
 
-function makeShopInterior() {\n const room=new THREE.Group(); room.position.y=-50;\n box(room,0,-.18,0,16,.35,16,material(0x6e6b60),false);\n const wall=material(0xb6a78e);\n box(room,0,2.5,-8,16,5,.35,wall); box(room,-8,2.5,0,.35,5,16,wall); box(room,8,2.5,0,.35,5,16,wall); box(room,0,2.5,8,16,5,.35,wall);\n box(room,0,4.95,0,16,.25,16,material(0x42494a),false);\n for(const x of [-4,4]) {\n  box(room,x,1.35,-1,1.1,2.7,5.2,material(0x72563c));\n  for(let level=0;level<3;level++) box(room,x, .55+level*.82,-1,1.25,.12,5.35,material(0xc3a16a),false);\n  for(let n=0;n<4;n++) box(room,x+(n%2?-.25:.25),.85+Math.floor(n/2)*.82,-2.7+n*.95,.28,.38,.28,material([0x9c7042,0x557b75,0xb9a56e,0x8b554b][n]),false);\n }\n box(room,0,.65,5.6,5,.9,1.1,material(0x634a35));\n const labelCanvas=document.createElement("canvas");labelCanvas.width=512;labelCanvas.height=128;const c=labelCanvas.getContext("2d");c.fillStyle="#17252a";c.fillRect(0,0,512,128);c.fillStyle="#e1bd78";c.font="bold 58px sans-serif";c.textAlign="center";c.fillText("WELCOME",256,82);\n const label=new THREE.Mesh(new THREE.PlaneGeometry(5,1.25),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(labelCanvas)}));label.position.set(0,3.1,-7.78);room.add(label); scene.add(room);\n}\n\nfunction makeShopAndLandmarks() {
+function makeShopAndLandmarks() {
  const shop = new THREE.Group(); shop.position.set(48,0,16);
  box(shop,0,3,0,12,6,10,material(0xb69a72));
  box(shop,0,6.12,0,12.3,.24,10.3,material(0x42494a),false);
