@@ -198,7 +198,8 @@ function makeAvatar() {
   for(const x of [-.13,.13]) { const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.105,.48,3,7),trousers); leg.position.set(x,.42,0); group.add(leg); legs.push(leg); }
   const arms=[];
   for(const x of [-.34,.34]) { const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.42,3,7),skin); arm.position.set(x,1.02,0); group.add(arm); arms.push(arm); }
-  group.userData.limbs=[...legs,...arms]; group.visible=false; scene.add(group); return group;
+  const baton=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.9,8),material(0x343a40));baton.rotation.z=-.22;baton.position.set(.43,.72,.18);baton.visible=false;group.add(baton);
+  group.userData.stunBaton=baton;group.userData.limbs=[...legs,...arms]; group.visible=false; scene.add(group); return group;
 }
 function makeMissionMarker() {
   const g=new THREE.Group();
@@ -310,6 +311,7 @@ function startSecurityMission() {
  if(securityMissionComplete){showDialogue("CITY POLICE","Security contract completed. Thank you for helping keep the district safe.","CLOSE",closeDialogue);return;}
  if(securityMissionActive){showDialogue("CITY POLICE","Your assignment is active. Neutralise the remaining suspects with your non-lethal stun baton. Targets remaining: "+securityTargetsRemaining+".","UNDERSTOOD",closeDialogue);return;}
  securityMissionActive=true;hasStunBaton=true;securityTargetsRemaining=3;
+ if(avatar?.userData.stunBaton)avatar.userData.stunBaton.visible=true;
  spawnSecurityTargets();
  objectiveLabel.textContent="Security contract: 3 suspects remaining · Press G to use stun baton";
  showDialogue("CITY POLICE","A security alert came from the old service yard. We need you to safely restrain three suspects. Your non-lethal stun baton is ready. Approach a suspect and press G. Avoid getting surrounded.","ACCEPT ASSIGNMENT",()=>{closeDialogue();saveProgress();});
@@ -317,7 +319,7 @@ function startSecurityMission() {
 }
 function spawnSecurityTargets() {
  if(hostiles.length)return;
- [[-94,-42],[-94,-49],[-94,-56]].forEach((p,i)=>{
+ [[-94,-42],[-94,-49],[-94,-56]].slice(0,securityTargetsRemaining).forEach((p,i)=>{
   const g=new THREE.Group(),shirt=material([0x713f3a,0x51404a,0x6b5140][i]),skin=material(0x80543d),pants=material(0x292c32);
   const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.29,.58,4,8),shirt);torso.position.y=1.02;g.add(torso);
   const head=new THREE.Mesh(new THREE.SphereGeometry(.21,12,10),skin);head.position.y=1.56;g.add(head);
@@ -781,7 +783,7 @@ try {
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";health=Number.isFinite(saved.health)?clamp(saved.health,0,healthCapacity):health;healthLabel.textContent=Math.round(health)+"%";securityMissionActive=Boolean(saved.securityMissionActive);securityMissionComplete=Boolean(saved.securityMissionComplete);hasStunBaton=Boolean(saved.hasStunBaton);securityTargetsRemaining=Number.isFinite(saved.securityTargetsRemaining)?clamp(saved.securityTargetsRemaining,0,3):0;if(securityMissionActive)spawnSecurityTargets();wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
+      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";health=Number.isFinite(saved.health)?clamp(saved.health,0,healthCapacity):health;healthLabel.textContent=Math.round(health)+"%";securityMissionActive=Boolean(saved.securityMissionActive);securityMissionComplete=Boolean(saved.securityMissionComplete);hasStunBaton=Boolean(saved.hasStunBaton);securityTargetsRemaining=Number.isFinite(saved.securityTargetsRemaining)?clamp(saved.securityTargetsRemaining,0,3):0;if(avatar?.userData.stunBaton)avatar.userData.stunBaton.visible=hasStunBaton;if(securityMissionActive)spawnSecurityTargets();wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
