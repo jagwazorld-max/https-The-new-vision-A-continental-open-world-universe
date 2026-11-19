@@ -22,7 +22,7 @@ let scene, camera, renderer, player, vehicle, clock;
 let cameraPitch = 0, cameraYaw = 0;
 let worldTime = 0.28;
 let sunLight = null, hemiLight = null;
-const streetLamps = [], buildingWindowMaterials = [], vehicleHeadlights = [];
+const streetLamps = [], buildingWindowMaterials = [], vehicleHeadlights = [], trafficSignalLenses = [];
 const clockLabel = document.querySelector("#world-clock");
 let running = false;
 let paused = false;
@@ -167,10 +167,12 @@ function makeRoadInfrastructure(isTouchDevice) {
     shaft.position.y=2.1; pole.add(shaft);
     const head = new THREE.Mesh(new THREE.BoxGeometry(.42,1.12,.34),signalHousing);
     head.position.set(face*.22,3.72,0); pole.add(head);
-    for (const [y,mat] of [[4.05,signalRed],[3.73,signalAmber],[3.41,signalGreen]]) {
+    const lenses = {};
+    for (const [name,y,mat] of [["red",4.05,signalRed],["amber",3.73,signalAmber],["green",3.41,signalGreen]]) {
       const lens = new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),mat);
-      lens.position.set(face*.22,y,.18); pole.add(lens);
+      lens.position.set(face*.22,y,.18); pole.add(lens); lenses[name]=lens;
     }
+    trafficSignalLenses.push(lenses);
     scene.add(pole);
   }
 }
@@ -249,7 +251,8 @@ function makeTrafficCar(x, z, heading, color) {
     tire.rotation.z = Math.PI / 2; tire.position.set(tx, .35, tz); group.add(tire);
   }
   group.position.set(x, 0, z); group.rotation.y = heading; scene.add(group);
-  return { mesh: group, direction: heading === 0 ? 1 : -1, laneX: x, pace: 7 + Math.random() * 5 };
+  const pace = 7 + Math.random() * 5;
+  return { mesh: group, direction: heading === 0 ? 1 : -1, laneX: x, pace, currentSpeed: pace };
 }
 function makeHumanoid({skinTone=0x87583e,shirtColor=0x315b58,pantsColor=0x292f35,hairColor=0x171312,style=0,accessory=false}={}) {
  const g=new THREE.Group(),skin=material(skinTone,.92),shirt=material(shirtColor,.82),pants=material(pantsColor,.9),hair=material(hairColor,.95);
@@ -322,8 +325,28 @@ function collidesWithBuilding(position) {
   return buildingBounds.some(b => position.x > b.minX && position.x < b.maxX && position.z > b.minZ && position.z < b.maxZ);
 }
 function updateAmbientLife(delta) {
+  const signalPhase = clock.elapsedTime % 22;
+  const signalState = signalPhase < 14 ? "green" : signalPhase < 17 ? "amber" : "red";
+  for (const lenses of trafficSignalLenses) {
+    lenses.red.visible = signalState === "red";
+    lenses.amber.visible = signalState === "amber";
+    lenses.green.visible = signalState === "green";
+  }
   for (const car of traffic) {
-    car.mesh.position.z += car.direction * car.pace * delta;
+    const z = car.mesh.position.z;
+    const junction = car.direction > 0 ? Math.ceil((z + .001) / 32) * 32 : Math.floor((z - .001) / 32) * 32;
+    const stopLine = junction - car.direction * 7.5;
+    const distanceToLine = car.direction * (stopLine - z);
+    const mustStop = distanceToLine >= 0 && distanceToLine < 12 &&
+      (signalState === "red" || (signalState === "amber" && distanceToLine > 4));
+    const targetSpeed = mustStop ? 0 : car.pace;
+    car.currentSpeed = THREE.MathUtils.damp(car.currentSpeed, targetSpeed, mustStop ? 4.5 : 1.8, delta);
+    let nextZ = z + car.direction * car.currentSpeed * delta;
+    if (mustStop && car.direction * (stopLine - nextZ) < 0) {
+      nextZ = stopLine;
+      car.currentSpeed = 0;
+    }
+    car.mesh.position.z = nextZ;
     if (car.mesh.position.z > 118) car.mesh.position.z = -118;
     if (car.mesh.position.z < -118) car.mesh.position.z = 118;
   }
