@@ -329,6 +329,16 @@ function populateLife() {
     const z = -88 + (i * 17) % 176;
     pedestrians.push(makePedestrian(roadX + side * 8.2, z, i));
   }
+  // Dedicated crossing pedestrians at the central zebra crossings.
+  for (const z of [-7.65, 7.65]) for (const side of [-1, 1]) {
+    const person = makePedestrian(side * 8.2, z, pedestrians.length + 2);
+    person.crossingAgent = true;
+    person.crossingStartX = side * 8.2;
+    person.crossingEndX = -side * 8.2;
+    person.crossingZ = z;
+    person.crossingProgress = 0;
+    person.crossingWait = side < 0 ? 0 : 3;
+  }
 }
 function collidesWithBuilding(position) {
   return buildingBounds.some(b => position.x > b.minX && position.x < b.maxX && position.z > b.minZ && position.z < b.maxZ);
@@ -414,6 +424,23 @@ function updateAmbientLife(delta) {
     else position.x = nextCoordinate;
   }
   for (const person of pedestrians) {
+    if (person.crossingAgent) {
+      person.crossingWait = Math.max(0, person.crossingWait - delta);
+      const mayCross = axisSignal("z") === "red" && person.crossingWait <= 0;
+      if (mayCross) person.crossingProgress = Math.min(1, person.crossingProgress + delta * .42);
+      const progress = person.crossingProgress;
+      const x = THREE.MathUtils.lerp(person.crossingStartX, person.crossingEndX, progress);
+      person.mesh.position.set(x, 0, person.crossingZ);
+      person.mesh.rotation.y = person.crossingEndX > person.crossingStartX ? Math.PI / 2 : -Math.PI / 2;
+      animateHumanoid(person.mesh, clock.elapsedTime * 2.4, mayCross ? .8 : .06);
+      if (progress >= 1) {
+        person.crossingProgress = 0;
+        person.crossingStartX = -person.crossingStartX;
+        person.crossingEndX = -person.crossingEndX;
+        person.crossingWait = 5 + Math.random() * 7;
+      }
+      continue;
+    }
     const t = clock.elapsedTime * person.pace + person.phase;
     const walk=Math.sin(t);
     animateHumanoid(person.mesh,t,Math.abs(walk)*.85+.12);
