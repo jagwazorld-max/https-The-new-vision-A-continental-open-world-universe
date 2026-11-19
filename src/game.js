@@ -339,8 +339,17 @@ function updateAmbientLife(delta) {
     const distanceToLine = car.direction * (stopLine - z);
     const mustStop = distanceToLine >= 0 && distanceToLine < 12 &&
       (signalState === "red" || (signalState === "amber" && distanceToLine > 4));
-    const targetSpeed = mustStop ? 0 : car.pace;
-    car.currentSpeed = THREE.MathUtils.damp(car.currentSpeed, targetSpeed, mustStop ? 4.5 : 1.8, delta);
+    // Keep a safe following distance from the next vehicle in this lane.
+    let followingGap = Infinity;
+    for (const other of traffic) {
+      if (other === car || other.direction !== car.direction || Math.abs(other.laneX - car.laneX) > .25) continue;
+      const gap = car.direction * (other.mesh.position.z - z);
+      if (gap > 0 && gap < followingGap) followingGap = gap;
+    }
+    const gapLimitedSpeed = followingGap < 5.5 ? 0 : followingGap < 13 ? car.pace * THREE.MathUtils.clamp((followingGap - 5.5) / 7.5, 0, 1) : car.pace;
+    const targetSpeed = mustStop ? 0 : Math.min(car.pace, gapLimitedSpeed);
+    const braking = targetSpeed < car.currentSpeed;
+    car.currentSpeed = THREE.MathUtils.damp(car.currentSpeed, targetSpeed, braking ? 4.8 : 1.65, delta);
     let nextZ = z + car.direction * car.currentSpeed * delta;
     if (mustStop && car.direction * (stopLine - nextZ) < 0) {
       nextZ = stopLine;
