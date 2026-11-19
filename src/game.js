@@ -359,12 +359,10 @@ function startSecurityMission() {
 }
 function spawnSecurityTargets() {
  if(hostiles.length)return;
+ const shirts=[0x713f3a,0x51404a,0x6b5140],skins=[0x80543d,0x9a6749,0x70452f];
  [[-94,-42],[-94,-49],[-94,-56]].slice(0,securityTargetsRemaining).forEach((p,i)=>{
-  const g=new THREE.Group(),shirt=material([0x713f3a,0x51404a,0x6b5140][i]),skin=material(0x80543d),pants=material(0x292c32);
-  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.29,.58,4,8),shirt);torso.position.y=1.02;g.add(torso);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.21,12,10),skin);head.position.y=1.56;g.add(head);
-  for(const side of [-1,1]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.11,.46,3,7),pants);leg.position.set(side*.13,.4,0);g.add(leg);}
-  g.position.set(p[0],0,p[1]);scene.add(g);hostiles.push({mesh:g,health:1,attack:0});
+  const g=makeHumanoid({skinTone:skins[i],shirtColor:shirts[i],pantsColor:0x292c32,hairColor:0x171312,style:i+1});
+  g.position.set(p[0],0,p[1]);scene.add(g);hostiles.push({mesh:g,health:1,attack:0,phase:i*1.3});
  });
 }
 function useStunBaton() {
@@ -387,6 +385,7 @@ function updateSecurity(delta) {
  const target=playerMode==="vehicle"?vehicle.position:player.position;
  let closest=Infinity;
  for(const enemy of hostiles){
+  animateHumanoid(enemy.mesh,clock.elapsedTime*7+(enemy.phase||0),1);
   const dx=target.x-enemy.mesh.position.x,dz=target.z-enemy.mesh.position.z,d=Math.hypot(dx,dz);closest=Math.min(closest,d);
   if(d>2.25){const step=Math.min(d-1.8,2.2*delta);enemy.mesh.position.x+=dx/d*step;enemy.mesh.position.z+=dz/d*step;enemy.mesh.rotation.y=Math.atan2(dx,dz);}
  }
