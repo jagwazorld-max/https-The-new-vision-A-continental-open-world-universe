@@ -115,6 +115,65 @@ function makeBuilding(x, z, w, d, h, seed) {
   scene.add(group);
   buildingBounds.push({ minX: x - w / 2 - 1.4, maxX: x + w / 2 + 1.4, minZ: z - d / 2 - 1.8, maxZ: z + d / 2 + 1.8 });
 }
+function makeRoadInfrastructure(isTouchDevice) {
+  const pavementMat = material(0x777a76, .96);
+  const curbMat = material(0xb8b6a9, .9);
+  const crossingMat = new THREE.MeshBasicMaterial({ color: 0xe8e4d8 });
+  const poleMat = material(0x343a3d, .72);
+  const signalHousing = material(0x202629, .62);
+  const signalRed = new THREE.MeshBasicMaterial({ color: 0xff3030 });
+  const signalAmber = new THREE.MeshBasicMaterial({ color: 0xffbd36 });
+  const signalGreen = new THREE.MeshBasicMaterial({ color: 0x35d47a });
+  for (let i = -4; i <= 4; i++) {
+    const lane = i * 32;
+    for (const side of [-1, 1]) {
+      const offset = side * 7.45;
+      const verticalWalk = new THREE.Mesh(new THREE.PlaneGeometry(2.35, 240), pavementMat);
+      verticalWalk.rotation.x = -Math.PI / 2;
+      verticalWalk.position.set(lane + offset, .035, 0);
+      scene.add(verticalWalk);
+      const horizontalWalk = new THREE.Mesh(new THREE.PlaneGeometry(240, 2.35), pavementMat);
+      horizontalWalk.rotation.x = -Math.PI / 2;
+      horizontalWalk.position.set(0, .036, lane + offset);
+      scene.add(horizontalWalk);
+      const verticalCurb = new THREE.Mesh(new THREE.BoxGeometry(.16, .18, 240), curbMat);
+      verticalCurb.position.set(lane + side * 8.68, .09, 0);
+      scene.add(verticalCurb);
+      const horizontalCurb = new THREE.Mesh(new THREE.BoxGeometry(240, .18, .16), curbMat);
+      horizontalCurb.position.set(0, .09, lane + side * 8.68);
+      scene.add(horizontalCurb);
+    }
+  }
+  // Zebra crossings at the central civic junction and two nearby approaches.
+  for (const [cx, cz] of [[0,0],[32,0],[0,32],[-32,0]]) {
+    for (const side of [-1, 1]) {
+      for (let n = -3; n <= 3; n++) {
+        const acrossVertical = new THREE.Mesh(new THREE.PlaneGeometry(.62, 3.1), crossingMat);
+        acrossVertical.rotation.x = -Math.PI / 2;
+        acrossVertical.position.set(cx + n * .9, .043, cz + side * 7.65);
+        scene.add(acrossVertical);
+        const acrossHorizontal = new THREE.Mesh(new THREE.PlaneGeometry(3.1, .62), crossingMat);
+        acrossHorizontal.rotation.x = -Math.PI / 2;
+        acrossHorizontal.position.set(cx + side * 7.65, .044, cz + n * .9);
+        scene.add(acrossHorizontal);
+      }
+    }
+  }
+  // A visible four-way signal set at the central junction.
+  for (const [x,z,face] of [[-8.8,-8.8,1],[8.8,-8.8,-1],[-8.8,8.8,1],[8.8,8.8,-1]]) {
+    const pole = new THREE.Group();
+    pole.position.set(x, 0, z);
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.075,.095,4.2,8),poleMat);
+    shaft.position.y=2.1; pole.add(shaft);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(.42,1.12,.34),signalHousing);
+    head.position.set(face*.22,3.72,0); pole.add(head);
+    for (const [y,mat] of [[4.05,signalRed],[3.73,signalAmber],[3.41,signalGreen]]) {
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),mat);
+      lens.position.set(face*.22,y,.18); pole.add(lens);
+    }
+    scene.add(pole);
+  }
+}
 function makeStreetLighting(isTouchDevice) {
   const poleMat = material(0x343b3d, .7);
   const lampMat = new THREE.MeshStandardMaterial({ color: 0xffe5b3, emissive: 0xffc36b, emissiveIntensity: .08 });
@@ -743,6 +802,7 @@ function buildWorld() {
       dash2.rotation.x = -Math.PI / 2; dash2.position.set(n * 11, .031, i * 32); scene.add(dash2);
     }
   }
+  makeRoadInfrastructure(isTouchDevice);
   let seed = 17;
   const random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
   for (let x = -5; x <= 5; x++) for (let z = -5; z <= 5; z++) {
