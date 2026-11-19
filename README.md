@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 1.4 police station and mission selection
+## Current milestone — 1.5 living district conversations
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -35,6 +35,9 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Health and inventory supplies are saved locally, and older saves load with default full health.
 - Added an enterable Central District Police Station with a reception lobby, operations board, briefing counter and evidence-room fixtures. The station interior and return-to-street transition are saved locally.
 - Added a mission-selection board with two optional civilian contracts: recover lost evidence ($650) or deliver community supplies ($850). Players can browse assignments, accept one, travel to its marker, then return to the station to file the report and collect payment. Active and completed contracts persist locally.
+- Added three local NPCs with individual conversation topics: a Corner Market clerk, Community Clinic doctor and CROWNLINE Fuel attendant. Each has multiple dialogue lines, a repeatable conversation flow and locally saved conversation progress.
+- Added dedicated NPC interaction zones inside the market and beside the clinic and fuel station, separate from shopping and treatment interactions.
+- Removed a duplicate contract-marker draw in the minimap.
 - Added a separate contract marker to the minimap so the active assignment remains distinct from the waterfront story mission.
 - Added a police station landmark and a City Police officer who offers a security contract.
 - Accepting the contract equips a visible non-lethal stun baton and spawns three suspects at the service yard.
@@ -58,7 +61,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 - **F** — enter or exit vehicle
 - **I** — open inventory and use a Field Kit.
 - **G** — use the non-lethal stun baton during an active security contract.
-- **E** — talk to mission characters, enter the market, apartment or police station, use the operations board, refuel, shop and use home furniture while on foot
+- **E** — talk to local NPCs and mission characters, enter the market, apartment or police station, use the operations board, refuel, shop and use home furniture while on foot
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
 - **Esc** — pause or resume
