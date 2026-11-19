@@ -252,7 +252,9 @@ function makeTrafficCar(x, z, heading, color) {
   }
   group.position.set(x, 0, z); group.rotation.y = heading; scene.add(group);
   const pace = 7 + Math.random() * 5;
-  return { mesh: group, direction: heading === 0 ? 1 : -1, laneX: x, pace, currentSpeed: pace };
+  const axis = Math.abs(Math.sin(heading)) > .5 ? "x" : "z";
+  const direction = axis === "x" ? (Math.cos(heading) >= 0 ? 1 : -1) : (Math.sin(heading) >= 0 ? 1 : -1);
+  return { mesh: group, axis, direction, laneX: axis === "z" ? x : z, pace, currentSpeed: pace };
 }
 function makeHumanoid({skinTone=0x87583e,shirtColor=0x315b58,pantsColor=0x292f35,hairColor=0x171312,style=0,accessory=false}={}) {
  const g=new THREE.Group(),skin=material(skinTone,.92),shirt=material(shirtColor,.82),pants=material(pantsColor,.9),hair=material(hairColor,.95);
@@ -313,6 +315,11 @@ function populateLife() {
     traffic.push(makeTrafficCar(lane - 3.1, -95, 0, colors[traffic.length % colors.length]));
     traffic.push(makeTrafficCar(lane + 3.1, 95, Math.PI, colors[traffic.length % colors.length]));
   }
+  // Add cross-street traffic so intersections feel active from both directions.
+  for (const lane of [-64, -32, 32, 64]) {
+    traffic.push(makeTrafficCar(-95, lane + 3.1, Math.PI / 2, colors[traffic.length % colors.length]));
+    traffic.push(makeTrafficCar(95, lane - 3.1, -Math.PI / 2, colors[traffic.length % colors.length]));
+  }
   for (let i = 0; i < 22; i++) {
     const roadIndex = Math.floor(i / 6) - 1;
     const roadX = roadIndex * 32;
@@ -333,31 +340,35 @@ function updateAmbientLife(delta) {
     lenses.green.visible = signalState === "green";
   }
   for (const car of traffic) {
-    const z = car.mesh.position.z;
-    const junction = car.direction > 0 ? Math.ceil((z + .001) / 32) * 32 : Math.floor((z - .001) / 32) * 32;
+    const position = car.mesh.position;
+    const coordinate = car.axis === "z" ? position.z : position.x;
+    const junction = car.direction > 0 ? Math.ceil((coordinate + .001) / 32) * 32 : Math.floor((coordinate - .001) / 32) * 32;
     const stopLine = junction - car.direction * 7.5;
-    const distanceToLine = car.direction * (stopLine - z);
-    const mustStop = distanceToLine >= 0 && distanceToLine < 12 &&
+    const distanceToLine = car.direction * (stopLine - coordinate);
+    const mustStop = car.axis === "z" && distanceToLine >= 0 && distanceToLine < 12 &&
       (signalState === "red" || (signalState === "amber" && distanceToLine > 4));
-    // Keep a safe following distance from the next vehicle in this lane.
     let followingGap = Infinity;
     for (const other of traffic) {
-      if (other === car || other.direction !== car.direction || Math.abs(other.laneX - car.laneX) > .25) continue;
-      const gap = car.direction * (other.mesh.position.z - z);
+      if (other === car || other.axis !== car.axis || other.direction !== car.direction || Math.abs(other.laneX - car.laneX) > .25) continue;
+      const otherCoordinate = car.axis === "z" ? other.mesh.position.z : other.mesh.position.x;
+      const gap = car.direction * (otherCoordinate - coordinate);
       if (gap > 0 && gap < followingGap) followingGap = gap;
     }
     const gapLimitedSpeed = followingGap < 5.5 ? 0 : followingGap < 13 ? car.pace * THREE.MathUtils.clamp((followingGap - 5.5) / 7.5, 0, 1) : car.pace;
     const targetSpeed = mustStop ? 0 : Math.min(car.pace, gapLimitedSpeed);
     const braking = targetSpeed < car.currentSpeed;
     car.currentSpeed = THREE.MathUtils.damp(car.currentSpeed, targetSpeed, braking ? 4.8 : 1.65, delta);
-    let nextZ = z + car.direction * car.currentSpeed * delta;
-    if (mustStop && car.direction * (stopLine - nextZ) < 0) {
-      nextZ = stopLine;
+    let nextCoordinate = coordinate + car.direction * car.currentSpeed * delta;
+    if (mustStop && car.direction * (stopLine - nextCoordinate) < 0) {
+      nextCoordinate = stopLine;
       car.currentSpeed = 0;
     }
-    car.mesh.position.z = nextZ;
-    if (car.mesh.position.z > 118) car.mesh.position.z = -118;
-    if (car.mesh.position.z < -118) car.mesh.position.z = 118;
+    if (car.axis === "z") position.z = nextCoordinate;
+    else position.x = nextCoordinate;
+    if (nextCoordinate > 118) nextCoordinate = -118;
+    if (nextCoordinate < -118) nextCoordinate = 118;
+    if (car.axis === "z") position.z = nextCoordinate;
+    else position.x = nextCoordinate;
   }
   for (const person of pedestrians) {
     const t = clock.elapsedTime * person.pace + person.phase;
