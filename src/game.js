@@ -173,7 +173,7 @@ function makeMissionMarker() {
   const ring=new THREE.Mesh(new THREE.TorusGeometry(1.15,.09,8,32),new THREE.MeshBasicMaterial({color:0xe5bd69})); ring.rotation.x=Math.PI/2; ring.position.y=.18; g.add(ring);
   const beam=new THREE.Mesh(new THREE.CylinderGeometry(.035,.12,3.8,10,1,true),new THREE.MeshBasicMaterial({color:0xe5bd69,transparent:true,opacity:.38})); beam.position.y=2.1; g.add(beam);
   const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.38),new THREE.MeshStandardMaterial({color:0xffd37a,emissive:0x8b5c18})); gem.position.y=4.1; g.add(gem);
-  g.position.set(18,0,30); scene.add(g); return g;
+  g.position.set(18,0,40); scene.add(g); return g;
 }
 
 function makeStaticNpc(x,z,shirtColor=0x9b5b36) {
@@ -194,7 +194,7 @@ function closeDialogue(){dialoguePanel.classList.add("hidden");}
 function advanceMission() {
  closeDialogue();
  if(missionStage===0){
-  missionStage=1;missionMarker.position.set(-25,0,-32);
+  missionStage=1;missionMarker.position.set(-25,0,-42);
   objectiveLabel.textContent="Deliver the supplies to the dock worker";saveProgress();
  }else if(missionStage===1){
   missionStage=2;missionComplete=true;world.cash+=1000;missionMarker.visible=false;
@@ -286,7 +286,7 @@ function buildWorld() {
   populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
   avatar = makeAvatar(); missionMarker = makeMissionMarker();
-  makeStaticNpc(20,31,0x9b5b36); makeStaticNpc(-27,-32,0x315b58);
+  makeStaticNpc(20,40,0x9b5b36); makeStaticNpc(-27,-42,0x315b58);
   clock = new THREE.Clock();
 }
 
