@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 1.8 virtual joystick and touch camera
+## Current milestone — 1.9 proportional mobile joystick
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -37,7 +37,7 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Added a mission-selection board with two optional civilian contracts: recover lost evidence ($650) or deliver community supplies ($850). Players can browse assignments, accept one, travel to its marker, then return to the station to file the report and collect payment. Active and completed contracts persist locally.
 - Rebuilt the player, pedestrians and named local NPCs with more human proportions, shaped torsos, necks, ears, facial features, varied hairstyles, clothing details, footwear and accessories.
 - Improved character gait with alternating arm/leg stride, knee/hip motion, torso bounce, head movement and more coherent pedestrian facing direction.
-- Added mobile touch controls: analog-style virtual movement joystick, swipe-to-look camera zone, interact, enter/exit vehicle, sprint, inventory and stun actions. Keyboard controls remain supported on PC.
+- Added mobile touch controls: proportional analog movement joystick with variable walking speed, vehicle throttle/reverse and steering, swipe-to-look camera zone, interact, enter/exit vehicle, sprint, inventory, brake and stun actions. Keyboard controls remain supported on PC.
 - Added mobile rendering settings with reduced pixel ratio, disabled antialiasing and smaller shadow maps on touch-sized devices to improve performance.
 - Added individual articulated arm and leg pivots with continuous walk cycles for ambient pedestrians and the player; NPCs now have varied skin tones, outfits and silhouettes.
 - Added three local NPCs with individual conversation topics: a Corner Market clerk, Community Clinic doctor and CROWNLINE Fuel attendant. Each has multiple dialogue lines, a repeatable conversation flow and locally saved conversation progress.
