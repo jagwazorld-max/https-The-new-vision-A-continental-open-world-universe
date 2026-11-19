@@ -366,7 +366,7 @@ function updateAmbientLife(delta) {
           : new THREE.Vector2(junction, car.laneX);
         const p0 = new THREE.Vector2(position.x, position.z);
         const p1 = p0.clone().add(forward.clone().multiplyScalar(5.5));
-        const p3 = center.clone().add(forward.clone().multiplyScalar(8)).add(right.clone().multiplyScalar(3.1));
+        const p3 = center.clone().add(forward.clone().multiplyScalar(3.1)).add(right.clone().multiplyScalar(8));
         const outgoing = right.clone();
         const p2 = p3.clone().sub(outgoing.clone().multiplyScalar(5.5));
         car.turn = { t: 0, p0, p1, p2, p3, outgoing };
