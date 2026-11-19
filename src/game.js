@@ -19,6 +19,9 @@ let running = false;
 let paused = false;
 let speed = 0;
 let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionStage = 0, missionPulse = 0;
+let dialogueActionHandler = null;
+const shopPosition = new THREE.Vector3(39.5, 0, 16);
+world.supplies = 0;
 const traffic = [];
 const pedestrians = [];
 const buildingBounds = [];
@@ -186,11 +189,11 @@ function makeStaticNpc(x,z,shirtColor=0x9b5b36) {
  }
  g.position.set(x,0,z);scene.add(g);return g;
 }
-function showDialogue(speaker,message,action) {
- dialogueSpeaker.textContent=speaker;dialogueText.textContent=message;dialogueAction.textContent=action;
+function showDialogue(speaker,message,action,handler=advanceMission) {
+ dialogueSpeaker.textContent=speaker;dialogueText.textContent=message;dialogueAction.textContent=action;dialogueActionHandler=handler;
  dialoguePanel.classList.remove("hidden");
 }
-function closeDialogue(){dialoguePanel.classList.add("hidden");}
+function closeDialogue(){dialoguePanel.classList.add("hidden");dialogueActionHandler=null;}
 function advanceMission() {
  closeDialogue();
  if(missionStage===0){
@@ -204,7 +207,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,playerMode,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function exitVehicle() {
   if(playerMode!=="vehicle"||Math.abs(speed)>2.2)return;
@@ -217,10 +220,43 @@ function enterVehicle() {
   if(playerMode!=="foot"||player.position.distanceTo(vehicle.position)>4.2)return;
   playerMode="vehicle"; avatar.visible=false; player.position.copy(vehicle.position);
 }
+function buyFieldKit() {
+ closeDialogue();
+ if(world.cash < 250) { showDialogue("CORNER MARKET","You need $250 to buy a field kit. Complete the waterfront delivery to earn more.","CLOSE",closeDialogue); return; }
+ world.cash -= 250; world.supplies += 1; cashLabel.textContent=world.cash.toLocaleString();
+ showDialogue("CORNER MARKET","Field kit purchased. It has been added to your local save.","GOT IT",closeDialogue);
+ saveProgress();
+}
 function interact() {
- if(playerMode!=="foot"||missionComplete||player.position.distanceTo(missionMarker.position)>4.5)return;
- if(missionStage===0)showDialogue("THE WATERFRONT CONTACT","We need a sealed supply crate taken to our dock worker. The marked hand-off point is just across the district. Can you make the delivery?","ACCEPT DELIVERY");
- else if(missionStage===1)showDialogue("DOCK WORKER","That's the crate we were waiting for. The waterfront crew can take it from here. Thank you for getting it here safely.","COMPLETE DELIVERY · $1,000");
+ if(playerMode!=="foot")return;
+ if(!missionComplete && player.position.distanceTo(missionMarker.position)<4.5) {
+  if(missionStage===0)showDialogue("THE WATERFRONT CONTACT","We need a sealed supply crate taken to our dock worker. The marked hand-off point is just across the district. Can you make the delivery?","ACCEPT DELIVERY");
+  else if(missionStage===1)showDialogue("DOCK WORKER","That's the crate we were waiting for. The waterfront crew can take it from here. Thank you for getting it here safely.","COMPLETE DELIVERY · $1,000");
+  return;
+ }
+ if(player.position.distanceTo(shopPosition)<4.8)showDialogue("CORNER MARKET","Welcome in. Pick up a field kit for $250. Your purchase is saved on this device.","BUY FIELD KIT · $250",buyFieldKit);
+}
+
+function makeShopAndLandmarks() {
+ const shop = new THREE.Group(); shop.position.set(48,0,16);
+ box(shop,0,3,0,12,6,10,material(0xb69a72));
+ box(shop,0,6.12,0,12.3,.24,10.3,material(0x42494a),false);
+ box(shop,0,1.65,5.06,7.4,3.3,.18,material(0x253c43,.35),false);
+ box(shop,-4.35,1.5,5.08,1.1,3,.2,material(0x8a6947),false);
+ box(shop,4.35,1.5,5.08,1.1,3,.2,material(0x8a6947),false);
+ const signCanvas=document.createElement("canvas");signCanvas.width=512;signCanvas.height=128;
+ const ctx=signCanvas.getContext("2d");ctx.fillStyle="#17252a";ctx.fillRect(0,0,512,128);ctx.fillStyle="#e1bd78";ctx.font="900 58px sans-serif";ctx.textAlign="center";ctx.fillText("CORNER MARKET",256,82);
+ const signTexture=new THREE.CanvasTexture(signCanvas);const sign=new THREE.Mesh(new THREE.PlaneGeometry(8.5,2.1),new THREE.MeshBasicMaterial({map:signTexture}));sign.position.set(0,4.15,5.18);shop.add(sign);scene.add(shop);
+ buildingBounds.push({minX:40.4,maxX:55.6,minZ:8.8,maxZ:23.2});
+ // A civic clock tower gives the district a distant navigation landmark.
+ const tower=new THREE.Group();tower.position.set(-48,0,48);
+ box(tower,0,11,0,9,22,9,material(0x9caaab));
+ box(tower,0,22.4,0,10,1,10,material(0x4a5659));
+ const crown=new THREE.Mesh(new THREE.ConeGeometry(6.2,8,4),material(0x5a6260));crown.position.y=27;crown.rotation.y=Math.PI/4;tower.add(crown);
+ const clockFace=new THREE.Mesh(new THREE.CircleGeometry(1.45,32),new THREE.MeshBasicMaterial({color:0xe6d2a4}));clockFace.position.set(0,17.2,4.56);tower.add(clockFace);
+ const hand=new THREE.Mesh(new THREE.BoxGeometry(.08,1.05,.04),material(0x27343a));hand.position.set(0,17.45,4.62);tower.add(hand);scene.add(tower);
+ buildingBounds.push({minX:-54,maxX:-42,minZ:42,maxZ:54});
+ makeStaticNpc(40,16,0x9b884e);
 }
 
 function buildWorld() {
@@ -282,6 +318,7 @@ function buildWorld() {
   water.rotation.x = -Math.PI / 2; water.position.set(0, -.08, -160); scene.add(water);
   const shore = new THREE.Mesh(new THREE.PlaneGeometry(240, 12), material(0xc2ad82));
   shore.rotation.x = -Math.PI / 2; shore.position.set(0, -.01, -112); scene.add(shore);
+  makeShopAndLandmarks();
   vehicle = makeCar();
   populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
@@ -364,13 +401,13 @@ window.addEventListener("resize", () => {
 document.querySelector("#start-button").addEventListener("click", startGame);
 document.querySelector("#pause-button").addEventListener("click", () => { if (running) setPaused(true); });
 document.querySelector("#resume-button").addEventListener("click", () => setPaused(false));
-dialogueAction.addEventListener("click", advanceMission);
+dialogueAction.addEventListener("click", () => { if(dialogueActionHandler)dialogueActionHandler(); });
 try {
   buildWorld();
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
+      world.cash=Number(saved.cash)||2500;world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
