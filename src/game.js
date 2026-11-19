@@ -167,7 +167,7 @@ function makeHumanoid({skinTone=0x87583e,shirtColor=0x315b58,pantsColor=0x292f35
  const g=new THREE.Group(),skin=material(skinTone,.92),shirt=material(shirtColor,.82),pants=material(pantsColor,.9),hair=material(hairColor,.95);
  const shoe=material(style%3===0?0x17191c:0x4b4037,.72),detail=material(style%2?0xc49a58:0x25292d,.6);
  const add=(geo,mat,x,y,z,sx=1,sy=1,sz=1,parent=g)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;};
- add(new THREE.CapsuleGeometry(.255,.48,5,10),shirt,0,1.08,0,1,.98,.82);
+ const torso=add(new THREE.CapsuleGeometry(.255,.48,5,10),shirt,0,1.08,0,1,.98,.82);
  add(new THREE.CylinderGeometry(.19,.235,.2,10),pants,0,.76,0);
  add(new THREE.CylinderGeometry(.075,.085,.13,10),skin,0,1.43,0);
  const head=add(new THREE.SphereGeometry(.205,18,14),skin,0,1.65,0,.91,1.12,.9);
@@ -195,11 +195,19 @@ function makeHumanoid({skinTone=0x87583e,shirtColor=0x315b58,pantsColor=0x292f35
   add(new THREE.SphereGeometry(.075,9,8),skin,0,-.47,.012,.85,1,.85,arm);limbs.push(arm);
  }
  if(accessory){const strap=add(new THREE.BoxGeometry(.055,.66,.045),detail,.21,1.02,.03);strap.rotation.z=-.28;add(new THREE.BoxGeometry(.24,.28,.1),material(0x514337),.3,.76,-.04);}
- g.userData.limbs=limbs;g.userData.head=head;return g;
+ g.userData.limbs=limbs;g.userData.head=head;g.userData.torso=torso;return g;
 }
 function animateHumanoid(person,t,amount=1){
- (person.userData.limbs||[]).forEach((limb,i)=>{limb.rotation.x=Math.sin(t)*amount*.48*(i%2===0?1:-1);});
- if(person.userData.head)person.userData.head.rotation.y=Math.sin(t*.37)*.045;
+ const limbs=person.userData.limbs||[];
+ const stride=Math.sin(t)*amount;
+ // Array order is left leg, left arm, right leg, right arm.
+ limbs.forEach((limb,i)=>{
+  const phase=(i===0||i===3)?stride:-stride;
+  limb.rotation.x=phase*(i%2===0?.72:.52);
+  if(i===0||i===2)limb.rotation.z=Math.max(0,Math.cos(t+(i===0?0:Math.PI)))*amount*.12*(i===0?1:-1);
+ });
+ if(person.userData.head){person.userData.head.rotation.y=Math.sin(t*.31)*.035;person.userData.head.rotation.x=Math.abs(stride)*.018;}
+ if(person.userData.torso){person.userData.torso.position.y=1.08+Math.abs(stride)*.035;person.userData.torso.rotation.z=Math.sin(t*.5)*amount*.018;}
 }
 function makePedestrian(x,z,phase) {
  const skins=[0x754b35,0x9a6749,0x593b2c,0xb17d58,0x6f4937,0x996b54];
@@ -233,10 +241,13 @@ function updateAmbientLife(delta) {
   }
   for (const person of pedestrians) {
     const t = clock.elapsedTime * person.pace + person.phase;
-    animateHumanoid(person.mesh,t,1);
-    person.mesh.position.x = person.originX + Math.sin(t) * 1.6;
-    person.mesh.position.z = person.originZ + Math.cos(t * .7) * 2.8;
-    person.mesh.rotation.y = Math.atan2(Math.cos(t), -Math.sin(t * .7));
+    const walk=Math.sin(t);
+    animateHumanoid(person.mesh,t,Math.abs(walk)*.85+.12);
+    const nextX=person.originX+Math.sin(t)*2.1;
+    const nextZ=person.originZ+Math.cos(t*.7)*3.4;
+    const dx=nextX-person.mesh.position.x,dz=nextZ-person.mesh.position.z;
+    person.mesh.position.x=nextX;person.mesh.position.z=nextZ;
+    if(Math.hypot(dx,dz)>.001)person.mesh.rotation.y=Math.atan2(dx,dz);
   }
 }
 
@@ -771,7 +782,8 @@ function update(delta) {
   if(inApartment ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : inPoliceStation ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
   for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45){player.position.copy(prev);damagePlayer(12);break;}
   avatar.position.copy(player.position);avatar.rotation.y=player.heading;
-  const moving=f||b;animateHumanoid(avatar,clock.elapsedTime*(pace>6?11:7),moving?1:0);
+  const moving=f||b;animateHumanoid(avatar,clock.elapsedTime*(pace>6?10:7),moving?1:0);
+  if(moving){avatar.rotation.y=player.heading;}
   const offset=new THREE.Vector3(0,5.2,-8.5).applyAxisAngle(new THREE.Vector3(0,1,0),player.heading);
   camera.position.lerp(player.position.clone().add(offset),1-Math.pow(.001,delta));camera.lookAt(player.position.x,1.1,player.position.z);
   speedLabel.textContent="—";
@@ -842,6 +854,28 @@ window.addEventListener("keydown", event => {
 });
 window.addEventListener("keyup", event => keys.delete(event.code));
 window.addEventListener("blur", () => keys.clear());
+
+const touchControls=document.querySelector("#touch-controls");
+if(touchControls){
+ const release=(button)=>{const code=button.dataset.hold;if(code){keys.delete(code);button.classList.remove("pressed");}};
+ touchControls.querySelectorAll("[data-hold]").forEach(button=>{
+  const code=button.dataset.hold;
+  button.addEventListener("pointerdown",event=>{event.preventDefault();button.setPointerCapture?.(event.pointerId);keys.add(code);button.classList.add("pressed");});
+  for(const type of ["pointerup","pointercancel","lostpointercapture"])button.addEventListener(type,()=>release(button));
+ });
+ touchControls.querySelectorAll("[data-tap]").forEach(button=>{
+  button.addEventListener("pointerdown",event=>{event.preventDefault();const code=button.dataset.tap;
+   if(!running||paused)return;
+   if(code==="KeyE"&&dialoguePanel.classList.contains("hidden"))interact();
+   if(code==="KeyF"){if(playerMode==="vehicle")exitVehicle();else enterVehicle();}
+   if(code==="KeyI"&&dialoguePanel.classList.contains("hidden"))openInventory();
+   if(code==="KeyG"&&dialoguePanel.classList.contains("hidden"))useStunBaton();
+  });
+ });
+}
+window.addEventListener("pointerup",()=>{if(touchControls)touchControls.querySelectorAll("[data-hold]").forEach(button=>{keys.delete(button.dataset.hold);button.classList.remove("pressed");});});
+window.addEventListener("contextmenu",event=>{if(touchControls?.contains(event.target))event.preventDefault();});
+
 window.addEventListener("resize", () => {
   if (!camera || !renderer) return;
   camera.aspect = innerWidth / innerHeight;
