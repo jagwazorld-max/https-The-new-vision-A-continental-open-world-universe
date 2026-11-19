@@ -566,6 +566,7 @@ function drawMinimap() {
   dot(48,16,"#e3bd78",4); // Corner Market
   dot(-48,48,"#85c6d0",4); // Civic tower
   dot(16,-16,"#d8b36a",4); // Apartment
+  dot(-18,0,"#e28b55",4); // CROWNLINE Fuel
   if (missionMarker?.visible) dot(missionMarker.position.x, missionMarker.position.z, "#f0d078",4);
   dot(center.x,center.z,"#ffffff",4);
   ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.strokeRect(.5,.5,w-1,h-1);
