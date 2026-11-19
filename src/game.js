@@ -28,6 +28,14 @@ const healthCapacity = 100;
 const hospitalPosition = new THREE.Vector3(64,0,-40);
 const fuelCapacity = 100;
 let wantedLevel = 0;
+let securityMissionActive = false;
+let securityMissionComplete = false;
+let hasStunBaton = false;
+let securityTargetsRemaining = 0;
+let batonCooldown = 0;
+let hostileAttackCooldown = 0;
+const hostiles = [];
+const securityOfficerPosition = new THREE.Vector3(-80,0,-35);
 let wantedTimer = 0;
 let patrolCar = null;
 let patrolSirenTime = 0;
@@ -228,7 +236,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,health,securityMissionActive,securityMissionComplete,hasStunBaton,securityTargetsRemaining,wantedLevel:0,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function refuelVehicle() {
  closeDialogue();
@@ -295,7 +303,52 @@ function useFieldKit() {
  showDialogue("FIELD KIT USED","You recovered 40 health. Remaining Field Kits: "+world.supplies+".","CONTINUE",closeDialogue);saveProgress();
 }
 function openInventory() {
- showDialogue("PLAYER INVENTORY","HEALTH: "+Math.round(health)+" / 100\nFIELD KITS: "+world.supplies+"\nFUEL: "+Math.round(fuel)+"%\nYour Field Kits restore up to 40 health.","USE FIELD KIT",useFieldKit);
+ const items="HEALTH: "+Math.round(health)+" / 100\nFIELD KITS: "+world.supplies+"\nFUEL: "+Math.round(fuel)+"%\nSTUN BATON: "+(hasStunBaton?"EQUIPPED":"NOT OWNED")+"\n"+(securityMissionActive?"SECURITY TARGETS: "+securityTargetsRemaining:"");
+ showDialogue("PLAYER INVENTORY",items,"USE FIELD KIT",useFieldKit);
+}
+function startSecurityMission() {
+ if(securityMissionComplete){showDialogue("CITY POLICE","Security contract completed. Thank you for helping keep the district safe.","CLOSE",closeDialogue);return;}
+ if(securityMissionActive){showDialogue("CITY POLICE","Your assignment is active. Neutralise the remaining suspects with your non-lethal stun baton. Targets remaining: "+securityTargetsRemaining+".","UNDERSTOOD",closeDialogue);return;}
+ securityMissionActive=true;hasStunBaton=true;securityTargetsRemaining=3;
+ spawnSecurityTargets();
+ objectiveLabel.textContent="Security contract: 3 suspects remaining · Press G to use stun baton";
+ showDialogue("CITY POLICE","A security alert came from the old service yard. We need you to safely restrain three suspects. Your non-lethal stun baton is ready. Approach a suspect and press G. Avoid getting surrounded.","ACCEPT ASSIGNMENT",()=>{closeDialogue();saveProgress();});
+ saveProgress();
+}
+function spawnSecurityTargets() {
+ if(hostiles.length)return;
+ [[-94,-42],[-94,-49],[-94,-56]].forEach((p,i)=>{
+  const g=new THREE.Group(),shirt=material([0x713f3a,0x51404a,0x6b5140][i]),skin=material(0x80543d),pants=material(0x292c32);
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.29,.58,4,8),shirt);torso.position.y=1.02;g.add(torso);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.21,12,10),skin);head.position.y=1.56;g.add(head);
+  for(const side of [-1,1]){const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.11,.46,3,7),pants);leg.position.set(side*.13,.4,0);g.add(leg);}
+  g.position.set(p[0],0,p[1]);scene.add(g);hostiles.push({mesh:g,health:1,attack:0});
+ });
+}
+function useStunBaton() {
+ if(!securityMissionActive||!hasStunBaton){showDialogue("STUN BATON","Your stun baton is issued for the active city security contract.","CLOSE",closeDialogue);return;}
+ if(batonCooldown>0)return;
+ if(playerMode!=="foot"){showDialogue("STUN BATON","Exit your vehicle before using the stun baton.","CLOSE",closeDialogue);return;}
+ let target=null,best=4.4;
+ for(const enemy of hostiles){const d=player.position.distanceTo(enemy.mesh.position);if(d<best){best=d;target=enemy;}}
+ if(!target){showDialogue("STUN BATON","No suspect is close enough. Move within range and try again.","CLOSE",closeDialogue);return;}
+ batonCooldown=.65;target.health=0;scene.remove(target.mesh);
+ const index=hostiles.indexOf(target);if(index>=0)hostiles.splice(index,1);
+ securityTargetsRemaining=Math.max(0,securityTargetsRemaining-1);
+ if(securityTargetsRemaining===0){securityMissionActive=false;securityMissionComplete=true;world.cash+=1200;cashLabel.textContent=world.cash.toLocaleString();objectiveLabel.textContent="Security contract completed · $1,200 earned";showDialogue("CITY POLICE","All three suspects have been safely restrained. The district is secure. Your $1,200 contract payment has been issued.","COLLECT PAYMENT",closeDialogue);}
+ else {objectiveLabel.textContent="Security contract: "+securityTargetsRemaining+" suspects remaining · Press G";showDialogue("SECURITY CONTRACT","Suspect safely restrained. "+securityTargetsRemaining+" remaining.","CONTINUE",closeDialogue);}
+ saveProgress();
+}
+function updateSecurity(delta) {
+ if(!securityMissionActive)return;
+ batonCooldown=Math.max(0,batonCooldown-delta);hostileAttackCooldown=Math.max(0,hostileAttackCooldown-delta);
+ const target=playerMode==="vehicle"?vehicle.position:player.position;
+ let closest=Infinity;
+ for(const enemy of hostiles){
+  const dx=target.x-enemy.mesh.position.x,dz=target.z-enemy.mesh.position.z,d=Math.hypot(dx,dz);closest=Math.min(closest,d);
+  if(d>2.25){const step=Math.min(d-1.8,2.2*delta);enemy.mesh.position.x+=dx/d*step;enemy.mesh.position.z+=dz/d*step;enemy.mesh.rotation.y=Math.atan2(dx,dz);}
+ }
+ if(closest<2.3&&hostileAttackCooldown<=0){hostileAttackCooldown=1.7;damagePlayer(8);}
 }
 function visitHospital() {
  closeDialogue();
@@ -347,6 +400,7 @@ function interact() {
   }
   return;
  }
+ if(player.position.distanceTo(securityOfficerPosition)<6) {startSecurityMission();return;}
  if(player.position.distanceTo(hospitalPosition)<7) {
   showDialogue("CROWNLINE COMMUNITY CLINIC","Medical treatment restores your health to 100%. Treatment fee: $150. Current health: "+Math.round(health)+"%.","GET TREATMENT · $150",visitHospital);return;
  }
@@ -469,6 +523,15 @@ function makeHospital() {
  scene.add(clinic);buildingBounds.push({minX:56.5,maxX:71.5,minZ:-53.5,maxZ:-42.5});
  makeStaticNpc(64,-39,0x5e8b84);
 }
+function makePoliceStation() {
+ const station=new THREE.Group();station.position.set(-80,0,-48);
+ box(station,0,3.6,0,15,7.2,10,material(0x9ca9aa));box(station,0,7.35,0,15.5,.3,10.5,material(0x344b59),false);
+ box(station,0,1.5,5.08,2.7,3,.16,material(0x344b59),false);
+ const c=document.createElement("canvas");c.width=512;c.height=128;const ctx=c.getContext("2d");ctx.fillStyle="#203747";ctx.fillRect(0,0,512,128);ctx.fillStyle="#e8d7a8";ctx.font="900 62px sans-serif";ctx.textAlign="center";ctx.fillText("POLICE",256,82);
+ const sign=new THREE.Mesh(new THREE.PlaneGeometry(6.5,1.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)}));sign.position.set(0,5.6,5.12);station.add(sign);
+ scene.add(station);buildingBounds.push({minX:-88.2,maxX:-71.8,minZ:-54,maxZ:-42});
+ makeStaticNpc(-80,-35,0x344b75);
+}
 function makePoliceCar() {
  const car=new THREE.Group();
  box(car,0,.72,0,1.9,.62,3.8,material(0xe8e9e5,.4));
@@ -588,6 +651,7 @@ function buildWorld() {
   makeShopAndLandmarks();
   makeFuelStation();
   makeHospital();
+  makePoliceStation();
   patrolCar=makePoliceCar();
   vehicle = makeCar();
   populateLife();
@@ -601,6 +665,7 @@ function update(delta) {
  if(!running||paused)return;
  updateAmbientLife(delta);
  updatePolice(delta);
+ updateSecurity(delta);
  if(wantedLevel>0){wantedTimer-=delta;if(wantedTimer<=0){wantedLevel=0;updateWantedDisplay();}}
  if(playerMode==="vehicle"){
   const f=keys.has("KeyW")||keys.has("ArrowUp"),r=keys.has("KeyS")||keys.has("ArrowDown");
@@ -664,6 +729,7 @@ function drawMinimap() {
   dot(-18,0,"#e28b55",4); // CROWNLINE Fuel
   dot(-78,-78,"#7da7e8",4); // Police patrol base
   dot(64,-48,"#e28b8b",4); // Community clinic
+  dot(-80,-48,"#7da7e8",4); // Police station
   if (missionMarker?.visible) dot(missionMarker.position.x, missionMarker.position.z, "#f0d078",4);
   dot(center.x,center.z,"#ffffff",4);
   ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.strokeRect(.5,.5,w-1,h-1);
@@ -693,6 +759,7 @@ window.addEventListener("keydown", event => {
   keys.add(event.code);
   if (event.code === "Escape" && running) setPaused(!paused);
   if (!event.repeat && event.code === "KeyI" && running && !paused && dialoguePanel.classList.contains("hidden")) openInventory();
+  if (!event.repeat && event.code === "KeyG" && running && !paused && dialoguePanel.classList.contains("hidden")) useStunBaton();
   if (!event.repeat && event.code === "KeyF" && running && !paused) { if(playerMode==="vehicle") exitVehicle(); else enterVehicle(); }
   if (!event.repeat && event.code === "KeyE" && running && !paused && dialoguePanel.classList.contains("hidden")) interact();
 });
@@ -714,7 +781,7 @@ try {
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";health=Number.isFinite(saved.health)?clamp(saved.health,0,healthCapacity):health;healthLabel.textContent=Math.round(health)+"%";wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
+      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";health=Number.isFinite(saved.health)?clamp(saved.health,0,healthCapacity):health;healthLabel.textContent=Math.round(health)+"%";securityMissionActive=Boolean(saved.securityMissionActive);securityMissionComplete=Boolean(saved.securityMissionComplete);hasStunBaton=Boolean(saved.hasStunBaton);securityTargetsRemaining=Number.isFinite(saved.securityTargetsRemaining)?clamp(saved.securityTargetsRemaining,0,3):0;if(securityMissionActive)spawnSecurityTargets();wantedLevel=0;updateWantedDisplay();world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
@@ -730,7 +797,9 @@ try {
       if(missionStage===1)missionMarker.position.set(-25,0,-42);
       if(missionComplete||missionStage===2)missionMarker.visible=false;
       cashLabel.textContent=world.cash.toLocaleString();
-      if(missionStage===2)objectiveLabel.textContent="Delivery completed · $1,000 earned";
+      if(securityMissionComplete)objectiveLabel.textContent="Security contract completed · $1,200 earned";
+      else if(securityMissionActive)objectiveLabel.textContent="Security contract: "+securityTargetsRemaining+" suspects remaining · Press G";
+      else if(missionStage===2)objectiveLabel.textContent="Delivery completed · $1,000 earned";
       else if(missionStage===1)objectiveLabel.textContent="Deliver the supplies to the dock worker";
       else if(world.visited)objectiveLabel.textContent="Meet the waterfront contact";
     }
