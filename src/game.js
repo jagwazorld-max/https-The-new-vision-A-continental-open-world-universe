@@ -758,10 +758,11 @@ function update(delta) {
  if(playerMode==="vehicle"){
   const f=keys.has("KeyW")||keys.has("ArrowUp"),r=keys.has("KeyS")||keys.has("ArrowDown");
   const l=keys.has("KeyA")||keys.has("ArrowLeft"),q=keys.has("KeyD")||keys.has("ArrowRight");
-  speed=THREE.MathUtils.damp(speed,keys.has("Space")?0:f&&fuel>0?26:r&&fuel>0?-12:0,2.8,delta);
+  const forwardInput=touchMoveY<0?-touchMoveY:(f?1:0),reverseInput=touchMoveY>0?touchMoveY:(r?1:0);
+  speed=THREE.MathUtils.damp(speed,keys.has("Space")?0:fuel>0?forwardInput*26-reverseInput*12:0,2.8,delta);
   if(Math.abs(speed)>.1){fuel=Math.max(0,fuel-(Math.abs(speed)/26)*.035*delta);fuelLabel.textContent=Math.round(fuel)+"%";}
   if(fuel<=0)speed=THREE.MathUtils.damp(speed,0,5,delta);
-  const steer=(q?1:0)-(l?1:0);
+  const steer=touchMoveX||((q?1:0)-(l?1:0));
   if(Math.abs(speed)>.25)vehicle.rotation.y-=steer*delta*1.7*Math.sign(speed)*Math.min(1,Math.abs(speed)/8);
   const dir=new THREE.Vector3(Math.sin(vehicle.rotation.y),0,Math.cos(vehicle.rotation.y)),prev=vehicle.position.clone();
   vehicle.position.addScaledVector(dir,speed*delta); vehicle.position.x=clamp(vehicle.position.x,-112,112); vehicle.position.z=clamp(vehicle.position.z,-105,112);
@@ -775,10 +776,11 @@ function update(delta) {
  }else{
   const f=keys.has("KeyW")||keys.has("ArrowUp"),b=keys.has("KeyS")||keys.has("ArrowDown");
   const l=keys.has("KeyA")||keys.has("ArrowLeft"),r=keys.has("KeyD")||keys.has("ArrowRight");
-  player.heading-=((r?1:0)-(l?1:0))*delta*2.35;
+  const forwardInput=touchMoveY<0?-touchMoveY:(f?1:0),reverseInput=touchMoveY>0?touchMoveY:(b?1:0);
+  player.heading-=(touchMoveX||((r?1:0)-(l?1:0)))*delta*2.35;
   const pace=keys.has("ShiftLeft")||keys.has("ShiftRight")?8.2:4.6;
   const dir=new THREE.Vector3(Math.sin(player.heading),0,Math.cos(player.heading)),prev=player.position.clone();
-  player.position.addScaledVector(dir,((f?1:0)-(b?1:0))*pace*delta);
+  player.position.addScaledVector(dir,(forwardInput-reverseInput)*pace*delta);
   player.position.x=clamp(player.position.x,-112,112);player.position.z=clamp(player.position.z,-105,112);
   if(inApartment ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : inPoliceStation ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
   for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45){player.position.copy(prev);damagePlayer(12);break;}
@@ -861,7 +863,8 @@ const moveStick=document.querySelector("#move-stick");
 const moveKnob=document.querySelector("#move-knob");
 const cameraLook=document.querySelector("#camera-look");
 const touchMoveCodes=["KeyW","KeyA","KeyS","KeyD"];
-function clearTouchMove(){touchMoveCodes.forEach(code=>keys.delete(code));if(moveKnob)moveKnob.style.transform="translate(0px,0px)";}
+let touchMoveX=0,touchMoveY=0;
+function clearTouchMove(){touchMoveX=0;touchMoveY=0;touchMoveCodes.forEach(code=>keys.delete(code));if(moveKnob)moveKnob.style.transform="translate(0px,0px)";}
 if(moveStick&&moveKnob){
  let stickPointer=null;
  const moveStickPointer=event=>{
@@ -871,8 +874,8 @@ if(moveStick&&moveKnob){
   const limit=Math.min(rect.width,rect.height)*.31,len=Math.hypot(dx,dy);
   if(len>limit){dx=dx/len*limit;dy=dy/len*limit;}
   moveKnob.style.transform="translate("+dx+"px,"+dy+"px)";
+  touchMoveX=dx/limit;touchMoveY=dy/limit;
   touchMoveCodes.forEach(code=>keys.delete(code));
-  if(running&&!paused){if(dy<-limit*.2)keys.add("KeyW");if(dy>limit*.2)keys.add("KeyS");if(dx<-limit*.2)keys.add("KeyA");if(dx>limit*.2)keys.add("KeyD");}
  };
  moveStick.addEventListener("pointerdown",event=>{event.preventDefault();if(!running||paused)return;stickPointer=event.pointerId;moveStick.setPointerCapture(event.pointerId);moveStickPointer(event);});
  moveStick.addEventListener("pointermove",moveStickPointer);
