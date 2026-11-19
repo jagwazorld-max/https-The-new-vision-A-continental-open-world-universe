@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 1.6 lifelike character upgrade
+## Current milestone — 1.7 mobile controls and movement polish
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -36,6 +36,9 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Added an enterable Central District Police Station with a reception lobby, operations board, briefing counter and evidence-room fixtures. The station interior and return-to-street transition are saved locally.
 - Added a mission-selection board with two optional civilian contracts: recover lost evidence ($650) or deliver community supplies ($850). Players can browse assignments, accept one, travel to its marker, then return to the station to file the report and collect payment. Active and completed contracts persist locally.
 - Rebuilt the player, pedestrians and named local NPCs with more human proportions, shaped torsos, necks, ears, facial features, varied hairstyles, clothing details, footwear and accessories.
+- Improved character gait with alternating arm/leg stride, knee/hip motion, torso bounce, head movement and more coherent pedestrian facing direction.
+- Added mobile touch controls: directional movement pad, interact, enter/exit vehicle, sprint, inventory and stun actions. Keyboard controls remain supported on PC.
+- Added mobile rendering settings with reduced pixel ratio, disabled antialiasing and smaller shadow maps on touch-sized devices to improve performance.
 - Added individual articulated arm and leg pivots with continuous walk cycles for ambient pedestrians and the player; NPCs now have varied skin tones, outfits and silhouettes.
 - Added three local NPCs with individual conversation topics: a Corner Market clerk, Community Clinic doctor and CROWNLINE Fuel attendant. Each has multiple dialogue lines, a repeatable conversation flow and locally saved conversation progress.
 - Added dedicated NPC interaction zones inside the market and beside the clinic and fuel station, separate from shopping and treatment interactions.
@@ -59,7 +62,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 
 ## Controls
 
-- **W / A / S / D** or arrow keys — drive and steer
+- **W / A / S / D** or arrow keys — drive and steer (mobile: on-screen directional pad)
 - **F** — enter or exit vehicle
 - **I** — open inventory and use a Field Kit.
 - **G** — use the non-lethal stun baton during an active security contract.
@@ -67,6 +70,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
 - **Esc** — pause or resume
+- **Mobile** — use the on-screen pad and action buttons; hold a direction to move/drive, tap E to interact and F to enter/exit the car.
 
 ## Project structure
 
