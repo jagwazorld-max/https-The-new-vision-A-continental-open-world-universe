@@ -23,6 +23,10 @@ let speed = 0;
 let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionStage = 0, missionPulse = 0;
 let dialogueActionHandler = null;
 let inShop = false;
+let inApartment = false;
+let ownsApartment = false;
+let homeSpawn = null;
+const apartmentDoorPosition = new THREE.Vector3(16, 0, -25.5);
 const shopPosition = new THREE.Vector3(39.5, 0, 16);
 const traffic = [];
 const pedestrians = [];
@@ -209,7 +213,28 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment,ownsApartment,homeSpawn,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+}
+function enterApartment() {
+  closeDialogue();
+  inShop = false;
+  inApartment = true;
+  player.position.set(0, -80, 6);
+  player.heading = Math.PI;
+  avatar.position.copy(player.position);
+  avatar.rotation.y = player.heading;
+  avatar.visible = true;
+  saveProgress();
+}
+function buyApartment() {
+  if (world.cash < 1500) {
+    showDialogue("APARTMENT LISTING", "The starter apartment costs $1,500. Complete the waterfront delivery or earn more cash first.", "CLOSE", closeDialogue);
+    return;
+  }
+  world.cash -= 1500;
+  ownsApartment = true;
+  cashLabel.textContent = world.cash.toLocaleString();
+  enterApartment();
 }
 function exitVehicle() {
   if(playerMode!=="vehicle"||Math.abs(speed)>2.2)return;
@@ -231,6 +256,23 @@ function buyFieldKit() {
 }
 function interact() {
  if(playerMode!=="foot")return;
+ if(inApartment) {
+  if(player.position.distanceTo(new THREE.Vector3(0,-80,6))<3.5) {
+   inApartment=false; player.position.set(16,0,-25.5); avatar.position.copy(player.position);
+   showDialogue("YOUR APARTMENT","You stepped outside. Your home ownership and furnishings are saved on this device.","CLOSE",closeDialogue);
+   saveProgress(); return;
+  }
+  if(player.position.distanceTo(new THREE.Vector3(-4,-80,-2))<3.5) {
+   homeSpawn=[16,0,-25.5];
+   showDialogue("YOUR BEDROOM","You rest in your own apartment. This address is now saved as your home spawn point.","SET HOME SPAWN",()=>{closeDialogue();saveProgress();});
+   return;
+  }
+  if(player.position.distanceTo(new THREE.Vector3(4,-80,2))<3.2) {
+   showDialogue("LIVING ROOM","A quiet place to relax after exploring the city. Your apartment progress is saved automatically.","CLOSE",closeDialogue);
+   return;
+  }
+  return;
+ }
  if(inShop) {
   if(player.position.distanceTo(new THREE.Vector3(0,-50,6))<3.2) {
    inShop=false; player.position.set(39.5,0,22.5); avatar.position.copy(player.position);
@@ -239,6 +281,11 @@ function interact() {
   if(player.position.distanceTo(new THREE.Vector3(-4,-50,-1))<3.2 || player.position.distanceTo(new THREE.Vector3(4,-50,-1))<3.2) {
    showDialogue("CORNER MARKET · SHELF","Field Kit · $250. A compact kit for your travels.","BUY FIELD KIT · $250",buyFieldKit); return;
   }
+  return;
+ }
+ if(player.position.distanceTo(apartmentDoorPosition)<4.8) {
+  if(ownsApartment) showDialogue("YOUR APARTMENT","Welcome home. Your own starter apartment is ready whenever you need it.","ENTER HOME",enterApartment);
+  else showDialogue("APARTMENT LISTING","A private starter apartment in the Central District, with a bedroom, living room and desk. Ownership is permanent in this local save.","BUY & MOVE IN · $1,500",buyApartment);
   return;
  }
  if(!missionComplete && player.position.distanceTo(missionMarker.position)<4.5) {
@@ -264,6 +311,46 @@ function makeShopInterior() {
  const label=new THREE.Mesh(new THREE.PlaneGeometry(5,1.25),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(labelCanvas)}));label.position.set(0,3.1,-7.78);room.add(label); scene.add(room);
 }
 
+function makeApartmentInterior() {
+ const room=new THREE.Group(); room.position.y=-80;
+ box(room,0,-.18,0,18,.35,16,material(0x6d6255),false);
+ const wall=material(0xd0c2a7);
+ box(room,0,2.5,-8,18,5,.35,wall); box(room,-9,2.5,0,.35,5,16,wall); box(room,9,2.5,0,.35,5,16,wall); box(room,0,2.5,8,18,5,.35,wall);
+ box(room,0,4.95,0,18,.25,16,material(0x30383b),false);
+ box(room,-4,.38,-2,4.2,.55,3.5,material(0x553d31));
+ box(room,-4,.78,-2,3.9,.28,3.25,material(0xd8d0bd));
+ box(room,-4,1.02,-3.15,3.8,.22,.55,material(0x9caaad));
+ box(room,-5.1,1.1,-3.15,.75,.2,.42,material(0xf0e8d8));
+ box(room,-2.1,.7,-3.1,1,.9,1,material(0x6b513d));
+ box(room,4,.65,2,4.2,1.1,1.5,material(0x53636a));
+ box(room,4,1.18,1.35,4.2,.25,.3,material(0x38484f));
+ box(room,4,.38,-.2,2.2,.35,1.2,material(0x765a3e));
+ box(room,4,.75,-4,3.4,.18,1.2,material(0x76583d));
+ box(room,4,1.35,-4.35,1.5,1.05,.12,material(0x1e2b31));
+ box(room,4,1.36,-4.25,1.25,.78,.04,material(0x527a82));
+ box(room,7,1.35,-5.7,1.5,2.7,1.1,material(0x775d45));
+ const signCanvas=document.createElement("canvas");signCanvas.width=512;signCanvas.height=128;
+ const c=signCanvas.getContext("2d");c.fillStyle="#17252a";c.fillRect(0,0,512,128);c.fillStyle="#e1bd78";c.font="bold 48px sans-serif";c.textAlign="center";c.fillText("YOUR HOME",256,82);
+ const label=new THREE.Mesh(new THREE.PlaneGeometry(4.8,1.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signCanvas)}));label.position.set(0,3.35,-7.78);room.add(label);
+ scene.add(room);
+}
+function makeApartmentExterior() {
+ const home=new THREE.Group();home.position.set(16,0,-16);
+ box(home,0,4.2,0,14,8.4,12,material(0x9b8c78));
+ box(home,0,8.55,0,14.5,.3,12.5,material(0x343e42),false);
+ box(home,0,1.65,6.08,2.5,3.3,.16,material(0x4a3025),false);
+ box(home,-4.2,3.4,6.08,2.1,1.8,.12,material(0x263d47),false);
+ box(home,4.2,3.4,6.08,2.1,1.8,.12,material(0x263d47),false);
+ box(home,-4.2,6.3,6.08,2.1,1.5,.12,material(0x263d47),false);
+ box(home,4.2,6.3,6.08,2.1,1.5,.12,material(0x263d47),false);
+ box(home,0,2.2,6.2,3.5,.18,1.1,material(0x725a42));
+ const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;
+ const ctx=canvas.getContext("2d");ctx.fillStyle="#17252a";ctx.fillRect(0,0,512,128);ctx.fillStyle="#e1bd78";ctx.font="900 52px sans-serif";ctx.textAlign="center";ctx.fillText("RESIDENCES",256,82);
+ const sign=new THREE.Mesh(new THREE.PlaneGeometry(5.8,1.45),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(canvas)}));sign.position.set(0,7.1,6.16);home.add(sign);
+ scene.add(home);
+ buildingBounds.push({minX:7,maxX:25,minZ:-24,maxZ:-8});
+ makeApartmentInterior();
+}
 function makeShopAndLandmarks() {
  const shop = new THREE.Group(); shop.position.set(48,0,16);
  box(shop,0,3,0,12,6,10,material(0xb69a72));
@@ -283,7 +370,9 @@ function makeShopAndLandmarks() {
  const clockFace=new THREE.Mesh(new THREE.CircleGeometry(1.45,32),new THREE.MeshBasicMaterial({color:0xe6d2a4}));clockFace.position.set(0,17.2,4.56);tower.add(clockFace);
  const hand=new THREE.Mesh(new THREE.BoxGeometry(.08,1.05,.04),material(0x27343a));hand.position.set(0,17.45,4.62);tower.add(hand);scene.add(tower);
  buildingBounds.push({minX:-54,maxX:-42,minZ:42,maxZ:54});
- makeStaticNpc(40,16,0x9b884e);\n makeShopInterior();
+ makeStaticNpc(40,16,0x9b884e);
+ makeShopInterior();
+ makeApartmentExterior();
 }
 
 function buildWorld() {
@@ -379,7 +468,7 @@ function update(delta) {
   const dir=new THREE.Vector3(Math.sin(player.heading),0,Math.cos(player.heading)),prev=player.position.clone();
   player.position.addScaledVector(dir,((f?1:0)-(b?1:0))*pace*delta);
   player.position.x=clamp(player.position.x,-112,112);player.position.z=clamp(player.position.z,-105,112);
-  if(inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
+  if(inApartment ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
   for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45)player.position.copy(prev);
   avatar.position.copy(player.position);avatar.rotation.y=player.heading;
   const moving=f||b;avatar.userData.limbs.forEach((limb,i)=>{const swing=moving?Math.sin(clock.elapsedTime*(pace>6?11:7))*.42:0;limb.rotation.x=swing*(i%2?-1:1);});
@@ -466,7 +555,11 @@ try {
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
       if(Number.isFinite(saved.playerHeading))player.heading=saved.playerHeading;
-      if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}\n      if(saved.inShop && playerMode==="foot"){inShop=true;player.position.set(0,-50,6);avatar.position.copy(player.position);}
+      if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
+      ownsApartment=Boolean(saved.ownsApartment);
+      homeSpawn=Array.isArray(saved.homeSpawn)?saved.homeSpawn:null;
+      if(saved.inApartment && playerMode==="foot"){inApartment=true;inShop=false;player.position.set(0,-80,6);avatar.position.copy(player.position);}
+      else if(saved.inShop && playerMode==="foot"){inShop=true;player.position.set(0,-50,6);avatar.position.copy(player.position);}
       if(missionStage===1)missionMarker.position.set(-25,0,-42);
       if(missionComplete||missionStage===2)missionMarker.visible=false;
       cashLabel.textContent=world.cash.toLocaleString();
