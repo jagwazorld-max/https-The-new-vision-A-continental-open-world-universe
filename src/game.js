@@ -13,6 +13,8 @@ const dialoguePanel = document.querySelector("#dialogue");
 const dialogueSpeaker = document.querySelector("#dialogue-speaker");
 const dialogueText = document.querySelector("#dialogue-text");
 const dialogueAction = document.querySelector("#dialogue-action");
+const minimapCanvas = document.querySelector("#minimap");
+const minimapContext = minimapCanvas?.getContext("2d");
 
 let scene, camera, renderer, player, vehicle, clock;
 let running = false;
@@ -21,7 +23,6 @@ let speed = 0;
 let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionStage = 0, missionPulse = 0;
 let dialogueActionHandler = null;
 const shopPosition = new THREE.Vector3(39.5, 0, 16);
-world.supplies = 0;
 const traffic = [];
 const pedestrians = [];
 const buildingBounds = [];
@@ -364,10 +365,37 @@ function update(delta) {
  const pos=playerMode==="vehicle"?vehicle.position:player.position;
  if(!world.visited&&pos.length()>28){world.visited=true;if(!missionComplete)objectiveLabel.textContent="Find the gold marker on foot";saveProgress();}
 }
+function drawMinimap() {
+  if (!minimapContext || !running || paused) return;
+  const ctx = minimapContext, w = minimapCanvas.width, h = minimapCanvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(7,13,18,.88)"; ctx.fillRect(0, 0, w, h);
+  const center = playerMode === "vehicle" ? vehicle.position : player.position;
+  const range = 115, scale = w / (range * 2);
+  const px = (x) => w / 2 + (x - center.x) * scale;
+  const py = (z) => h / 2 + (z - center.z) * scale;
+  ctx.strokeStyle = "rgba(215,205,175,.32)"; ctx.lineWidth = 4;
+  for (let n = -3; n <= 3; n++) {
+    const x = px(n * 32), y = py(n * 32);
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  const dot = (x,z,color,radius=3) => {
+    const dx=px(x),dy=py(z); if(dx < -5 || dx > w+5 || dy < -5 || dy > h+5)return;
+    ctx.fillStyle=color;ctx.beginPath();ctx.arc(dx,dy,radius,0,Math.PI*2);ctx.fill();
+  };
+  dot(48,16,"#e3bd78",4); // Corner Market
+  dot(-48,48,"#85c6d0",4); // Civic tower
+  if (missionMarker?.visible) dot(missionMarker.position.x, missionMarker.position.z, "#f0d078",4);
+  dot(center.x,center.z,"#ffffff",4);
+  ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=1;ctx.strokeRect(.5,.5,w-1,h-1);
+  ctx.fillStyle="#d8b36a";ctx.font="bold 9px sans-serif";ctx.fillText("N",w-13,12);
+}
 function frame() {
   requestAnimationFrame(frame);
   const delta = Math.min(clock ? clock.getDelta() : .016, .05);
   update(delta);
+  drawMinimap();
   if (renderer && scene && camera) renderer.render(scene, camera);
 }
 function setPaused(value) {
