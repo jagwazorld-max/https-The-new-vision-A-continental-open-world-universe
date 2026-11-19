@@ -8,6 +8,7 @@ const pauseScreen = document.querySelector("#pause-screen");
 const errorMessage = document.querySelector("#error-message");
 const cashLabel = document.querySelector("#cash");
 const speedLabel = document.querySelector("#speed");
+const fuelLabel = document.querySelector("#fuel");
 const objectiveLabel = document.querySelector("#objective");
 const dialoguePanel = document.querySelector("#dialogue");
 const dialogueSpeaker = document.querySelector("#dialogue-speaker");
@@ -20,6 +21,9 @@ let scene, camera, renderer, player, vehicle, clock;
 let running = false;
 let paused = false;
 let speed = 0;
+let fuel = 100;
+const fuelCapacity = 100;
+const fuelStationPosition = new THREE.Vector3(-18, 0, 0);
 let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionStage = 0, missionPulse = 0;
 let dialogueActionHandler = null;
 let inShop = false;
@@ -215,7 +219,15 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,fuel,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+}
+function refuelVehicle() {
+ closeDialogue();
+ if(fuel>=fuelCapacity){showDialogue("CROWNLINE FUEL","Your tank is already full.","CLOSE",closeDialogue);return;}
+ if(world.cash<100){showDialogue("CROWNLINE FUEL","You need $100 for a fuel top-up.","CLOSE",closeDialogue);return;}
+ world.cash-=100;fuel=Math.min(fuelCapacity,fuel+25);
+ cashLabel.textContent=world.cash.toLocaleString();fuelLabel.textContent=Math.round(fuel)+"%";
+ showDialogue("CROWNLINE FUEL","Fuel added. Your vehicle now has "+Math.round(fuel)+"% fuel remaining.","NICE",closeDialogue);saveProgress();
 }
 function enterApartment() {
   closeDialogue();
@@ -297,6 +309,9 @@ function interact() {
    showDialogue("CORNER MARKET · SHELF","Field Kit · $250. A compact kit for your travels.","BUY FIELD KIT · $250",buyFieldKit); return;
   }
   return;
+ }
+ if(player.position.distanceTo(fuelStationPosition)<5.5) {
+  showDialogue("CROWNLINE FUEL STOP","Fuel top-up: $100 for up to 25% tank capacity. Current fuel: "+Math.round(fuel)+"%.","REFUEL · $100",refuelVehicle);return;
  }
  if(player.position.distanceTo(apartmentDoorPosition)<4.8) {
   if(ownsApartment) showDialogue("YOUR APARTMENT","Welcome home. Your own starter apartment is ready whenever you need it.","ENTER HOME",enterApartment);
@@ -402,6 +417,25 @@ function makeShopAndLandmarks() {
  makeApartmentExterior();
 }
 
+function makeFuelStation() {
+ const station=new THREE.Group();station.position.set(-18,0,0);
+ box(station,0,.18,0,15,.36,12,material(0x777b72),false);
+ box(station,0,5.1,-1,13,.35,8,material(0xe1d8c4),false);
+ for(const x of [-5.3,5.3])box(station,x,2.55,-1,.35,5.1,.35,material(0x59636a));
+ box(station,0,5.45,-1,13.2,.25,8.2,material(0x253b46),false);
+ const signCanvas=document.createElement("canvas");signCanvas.width=512;signCanvas.height=128;
+ const ctx=signCanvas.getContext("2d");ctx.fillStyle="#17252a";ctx.fillRect(0,0,512,128);ctx.fillStyle="#e5bd69";ctx.font="900 62px sans-serif";ctx.textAlign="center";ctx.fillText("CROWNLINE FUEL",256,84);
+ const sign=new THREE.Mesh(new THREE.PlaneGeometry(8,2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signCanvas)}));sign.position.set(0,5.7,3.12);station.add(sign);
+ for(const x of [-3,0,3]){
+  box(station,x,.95,1.8,1.15,1.9,.85,material(0xd8d9d2));
+  box(station,x,1.45,1.8,.82,.48,.9,material(0x263b46));
+  box(station,x,2.1,1.8,.14,.8,.14,material(0x252b2e));
+  const hose=new THREE.Mesh(new THREE.TorusGeometry(.32,.055,6,16,Math.PI),material(0x202629));hose.rotation.z=Math.PI/2;hose.position.set(x+.48,1.15,2.05);station.add(hose);
+ }
+ scene.add(station);
+ makeStaticNpc(-25,2,0x315b58);
+}
+
 function buildWorld() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x9cb6c0);
@@ -462,6 +496,7 @@ function buildWorld() {
   const shore = new THREE.Mesh(new THREE.PlaneGeometry(240, 12), material(0xc2ad82));
   shore.rotation.x = -Math.PI / 2; shore.position.set(0, -.01, -112); scene.add(shore);
   makeShopAndLandmarks();
+  makeFuelStation();
   vehicle = makeCar();
   populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
@@ -476,7 +511,9 @@ function update(delta) {
  if(playerMode==="vehicle"){
   const f=keys.has("KeyW")||keys.has("ArrowUp"),r=keys.has("KeyS")||keys.has("ArrowDown");
   const l=keys.has("KeyA")||keys.has("ArrowLeft"),q=keys.has("KeyD")||keys.has("ArrowRight");
-  speed=THREE.MathUtils.damp(speed,keys.has("Space")?0:f?26:r?-12:0,2.8,delta);
+  speed=THREE.MathUtils.damp(speed,keys.has("Space")?0:f&&fuel>0?26:r&&fuel>0?-12:0,2.8,delta);
+  if(Math.abs(speed)>.1){fuel=Math.max(0,fuel-(Math.abs(speed)/26)*.035*delta);fuelLabel.textContent=Math.round(fuel)+"%";}
+  if(fuel<=0)speed=THREE.MathUtils.damp(speed,0,5,delta);
   const steer=(q?1:0)-(l?1:0);
   if(Math.abs(speed)>.25)vehicle.rotation.y-=steer*delta*1.7*Math.sign(speed)*Math.min(1,Math.abs(speed)/8);
   const dir=new THREE.Vector3(Math.sin(vehicle.rotation.y),0,Math.cos(vehicle.rotation.y)),prev=vehicle.position.clone();
@@ -578,7 +615,7 @@ try {
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
+      world.cash=Number(saved.cash)||2500;fuel=Number.isFinite(saved.fuel)?clamp(saved.fuel,0,fuelCapacity):fuel;fuelLabel.textContent=Math.round(fuel)+"%";world.supplies=Number.isFinite(saved.supplies)?Math.max(0,saved.supplies):0;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
