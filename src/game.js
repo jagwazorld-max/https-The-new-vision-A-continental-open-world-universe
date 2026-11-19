@@ -316,11 +316,12 @@ function populateLife() {
     traffic.push(makeTrafficCar(lane - 3.1, -95, 0, colors[traffic.length % colors.length]));
     traffic.push(makeTrafficCar(lane + 3.1, 95, Math.PI, colors[traffic.length % colors.length]));
   }
-  // Add cross-street traffic so intersections feel active from both directions.
+  // Cross-street traffic and a mix of first-junction turn intentions.
   for (const lane of [-64, -32, 32, 64]) {
     traffic.push(makeTrafficCar(-95, lane + 3.1, Math.PI / 2, colors[traffic.length % colors.length]));
     traffic.push(makeTrafficCar(95, lane - 3.1, -Math.PI / 2, colors[traffic.length % colors.length]));
   }
+  traffic.forEach((car,index)=>{ car.turnAtNext = index % 3 === 0; car.turnSide = index % 2 === 0 ? 1 : -1; car.hasTurned = false; });
   for (let i = 0; i < 22; i++) {
     const roadIndex = Math.floor(i / 6) - 1;
     const roadX = roadIndex * 32;
@@ -354,6 +355,41 @@ function updateAmbientLife(delta) {
     const signalState = axisSignal(car.axis);
     const mustStop = distanceToLine >= 0 && distanceToLine < 12 &&
       (signalState === "red" || (signalState === "amber" && distanceToLine > 4));
+    // Cars selected for a turn follow a smooth cubic path through the junction.
+    if (!car.turn && car.turnAtNext && !car.hasTurned && !mustStop) {
+      const distanceToJunction = car.direction * (junction - coordinate);
+      if (distanceToJunction > 0 && distanceToJunction <= 8) {
+        const forward = car.axis === "z" ? new THREE.Vector2(0, car.direction) : new THREE.Vector2(car.direction, 0);
+        const right = new THREE.Vector2(forward.y, -forward.x).multiplyScalar(car.turnSide);
+        const center = car.axis === "z"
+          ? new THREE.Vector2(car.laneX, junction)
+          : new THREE.Vector2(junction, car.laneX);
+        const p0 = new THREE.Vector2(position.x, position.z);
+        const p1 = p0.clone().add(forward.clone().multiplyScalar(5.5));
+        const p3 = center.clone().add(forward.clone().multiplyScalar(8)).add(right.clone().multiplyScalar(3.1));
+        const outgoing = right.clone();
+        const p2 = p3.clone().sub(outgoing.clone().multiplyScalar(5.5));
+        car.turn = { t: 0, p0, p1, p2, p3, outgoing };
+      }
+    }
+    if (car.turn) {
+      const turn = car.turn;
+      turn.t = Math.min(1, turn.t + (car.currentSpeed * delta) / 12.5);
+      const t = turn.t, u = 1 - t;
+      const x = u*u*u*turn.p0.x + 3*u*u*t*turn.p1.x + 3*u*t*t*turn.p2.x + t*t*t*turn.p3.x;
+      const z = u*u*u*turn.p0.y + 3*u*u*t*turn.p1.y + 3*u*t*t*turn.p2.y + t*t*t*turn.p3.y;
+      const dx = 3*u*u*(turn.p1.x-turn.p0.x) + 6*u*t*(turn.p2.x-turn.p1.x) + 3*t*t*(turn.p3.x-turn.p2.x);
+      const dz = 3*u*u*(turn.p1.y-turn.p0.y) + 6*u*t*(turn.p2.y-turn.p1.y) + 3*t*t*(turn.p3.y-turn.p2.y);
+      position.x = x; position.z = z;
+      car.mesh.rotation.y = Math.atan2(dx, dz);
+      if (turn.t >= 1) {
+        car.axis = Math.abs(turn.outgoing.x) > .5 ? "x" : "z";
+        car.direction = car.axis === "x" ? Math.sign(turn.outgoing.x) : Math.sign(turn.outgoing.y);
+        car.laneX = car.axis === "z" ? position.x : position.z;
+        car.hasTurned = true; car.turn = null;
+      }
+      continue;
+    }
     let followingGap = Infinity;
     for (const other of traffic) {
       if (other === car || other.axis !== car.axis || other.direction !== car.direction || Math.abs(other.laneX - car.laneX) > .25) continue;
