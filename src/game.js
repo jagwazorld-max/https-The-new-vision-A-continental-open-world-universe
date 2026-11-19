@@ -26,6 +26,8 @@ let inShop = false;
 let inApartment = false;
 let ownsApartment = false;
 let homeSpawn = null;
+let homeUpgrades = { television: false, plant: false, artwork: false };
+const homeUpgradeMeshes = {};
 const apartmentDoorPosition = new THREE.Vector3(16, 0, -6.5);
 const shopPosition = new THREE.Vector3(39.5, 0, 16);
 const traffic = [];
@@ -213,7 +215,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment,ownsApartment,homeSpawn,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function enterApartment() {
   closeDialogue();
@@ -224,6 +226,16 @@ function enterApartment() {
   avatar.position.copy(player.position);
   avatar.rotation.y = player.heading;
   avatar.visible = true;
+  saveProgress();
+}
+function buyHomeUpgrade(name, cost, label) {
+  closeDialogue();
+  if (homeUpgrades[name]) { showDialogue("YOUR APARTMENT", label + " is already installed.", "CLOSE", closeDialogue); return; }
+  if (world.cash < cost) { showDialogue("HOME FURNISHING", "You need $" + cost.toLocaleString() + " for " + label + ".", "CLOSE", closeDialogue); return; }
+  world.cash -= cost; homeUpgrades[name] = true;
+  if (homeUpgradeMeshes[name]) homeUpgradeMeshes[name].visible = true;
+  cashLabel.textContent = world.cash.toLocaleString();
+  showDialogue("HOME FURNISHING", label + " has been installed. Your upgrade is saved.", "NICE", closeDialogue);
   saveProgress();
 }
 function buyApartment() {
@@ -271,6 +283,9 @@ function interact() {
    showDialogue("LIVING ROOM","A quiet place to relax after exploring the city. Your apartment progress is saved automatically.","CLOSE",closeDialogue);
    return;
   }
+  if(player.position.distanceTo(new THREE.Vector3(0,-80,-4.7))<3.2) { showDialogue("HOME ENTERTAINMENT","Install a television and media unit for $400.","INSTALL TV · $400",()=>buyHomeUpgrade("television",400,"Living room television")); return; }
+  if(player.position.distanceTo(new THREE.Vector3(7,-80,3.5))<3.2) { showDialogue("HOME DECOR","Add a potted indoor plant for $250.","ADD PLANT · $250",()=>buyHomeUpgrade("plant",250,"Indoor plant")); return; }
+  if(player.position.distanceTo(new THREE.Vector3(-7,-80,1))<3.2) { showDialogue("HOME DECOR","Hang framed artwork for $300.","HANG ARTWORK · $300",()=>buyHomeUpgrade("artwork",300,"Framed artwork")); return; }
   return;
  }
  if(inShop) {
@@ -329,6 +344,18 @@ function makeApartmentInterior() {
  box(room,4,1.35,-4.35,1.5,1.05,.12,material(0x1e2b31));
  box(room,4,1.36,-4.25,1.25,.78,.04,material(0x527a82));
  box(room,7,1.35,-5.7,1.5,2.7,1.1,material(0x775d45));
+ const tv=new THREE.Group();
+ box(tv,0,1.85,0,2.8,1.65,.16,material(0x11191d)); box(tv,0,1.85,.1,2.52,1.38,.035,material(0x426b75,.3)); box(tv,0,.35,.35,3.4,.7,.8,material(0x493a30));
+ tv.position.set(0,0,-7.35);tv.visible=false;room.add(tv);homeUpgradeMeshes.television=tv;
+ const plant=new THREE.Group();
+ const pot=new THREE.Mesh(new THREE.CylinderGeometry(.38,.28,.55,12),material(0x9a6749));pot.position.y=.28;plant.add(pot);
+ const stem=new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,1.2,7),material(0x42613e));stem.position.y=1.05;plant.add(stem);
+ for(let i=0;i<5;i++){const leaf=new THREE.Mesh(new THREE.SphereGeometry(.35,8,7),material(0x47734c));leaf.scale.set(.55,1.5,.45);leaf.position.set(Math.cos(i*1.25)*.42,1.15+Math.sin(i*1.25)*.3,Math.sin(i*1.25)*.42);plant.add(leaf);}
+ plant.position.set(7,0,3.5);plant.visible=false;room.add(plant);homeUpgradeMeshes.plant=plant;
+ const art=new THREE.Group();
+ box(art,0,0,0,1.8,1.35,.12,material(0x72563c));box(art,0,0,.08,1.55,1.1,.035,material(0x426b75));
+ const sunDisc=new THREE.Mesh(new THREE.CircleGeometry(.28,20),new THREE.MeshBasicMaterial({color:0xe4bd75}));sunDisc.position.set(.38,.25,.11);art.add(sunDisc);
+ art.position.set(-7.45,2.2,1);art.visible=false;room.add(art);homeUpgradeMeshes.artwork=art;
  const signCanvas=document.createElement("canvas");signCanvas.width=512;signCanvas.height=128;
  const c=signCanvas.getContext("2d");c.fillStyle="#17252a";c.fillRect(0,0,512,128);c.fillStyle="#e1bd78";c.font="bold 48px sans-serif";c.textAlign="center";c.fillText("YOUR HOME",256,82);
  const label=new THREE.Mesh(new THREE.PlaneGeometry(4.8,1.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signCanvas)}));label.position.set(0,3.35,-7.78);room.add(label);
@@ -559,8 +586,11 @@ try {
       if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
       ownsApartment=Boolean(saved.ownsApartment);
       homeSpawn=Array.isArray(saved.homeSpawn)?saved.homeSpawn:null;
+      homeUpgrades={television:Boolean(saved.homeUpgrades?.television),plant:Boolean(saved.homeUpgrades?.plant),artwork:Boolean(saved.homeUpgrades?.artwork)};
+      for(const name of Object.keys(homeUpgrades)) if(homeUpgradeMeshes[name]) homeUpgradeMeshes[name].visible=homeUpgrades[name];
       if(saved.inApartment && playerMode==="foot"){inApartment=true;inShop=false;player.position.set(0,-80,6);avatar.position.copy(player.position);}
       else if(saved.inShop && playerMode==="foot"){inShop=true;player.position.set(0,-50,6);avatar.position.copy(player.position);}
+      else if(homeSpawn && playerMode==="foot"){player.position.fromArray(homeSpawn);avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
       if(missionStage===1)missionMarker.position.set(-25,0,-42);
       if(missionComplete||missionStage===2)missionMarker.visible=false;
       cashLabel.textContent=world.cash.toLocaleString();
