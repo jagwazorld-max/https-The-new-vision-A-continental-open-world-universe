@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 0.5 city landmarks and local commerce
+## Current milestone — 0.6 navigation and city landmarks
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -18,7 +18,7 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Completing the delivery awards $1,000; mission stage and cash persist in the local save.
 - Added the named Corner Market storefront with a nearby shopkeeper and an on-foot interaction.
 - Players can purchase a Field Kit for $250; cash and owned kit count persist locally.
-- Added a distinctive civic clock tower as a visible district landmark with collision boundaries.
+- Added a distinctive civic clock tower as a visible district landmark with collision boundaries.\n- Added a live district minimap showing the player, Corner Market, civic tower and active mission marker.\n- Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
 - Responsive title screen and local browser save for basic progress.
