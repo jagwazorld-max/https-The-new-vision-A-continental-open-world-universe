@@ -4,9 +4,9 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 2.2 dynamic day and night cycle
+## Current milestone — 2.3 nighttime city lighting
 
-- Browser-based 3D scene powered by Three.js.\n- A continuous 12-minute day/night cycle changes the sky, fog, sunlight, ambient light and exposure; the in-game clock is shown in the top bar. The world clock is saved with player progress.
+- Browser-based 3D scene powered by Three.js.\n- A continuous 12-minute day/night cycle changes the sky, fog, sunlight, ambient light and exposure; the in-game clock is shown in the top bar. The world clock is saved with player progress.\n- Street lamps illuminate the main road grid at night, building windows glow after dark, and the player's car headlights brighten the road ahead. Night lighting fades smoothly with the day cycle.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
 - Third-person follow camera and a drivable starter vehicle.
 - Moving ambient traffic and pedestrians bring the starter district to life.
