@@ -857,16 +857,50 @@ window.addEventListener("keyup", event => keys.delete(event.code));
 window.addEventListener("blur", () => keys.clear());
 
 const touchControls=document.querySelector("#touch-controls");
+const moveStick=document.querySelector("#move-stick");
+const moveKnob=document.querySelector("#move-knob");
+const cameraLook=document.querySelector("#camera-look");
+const touchMoveCodes=["KeyW","KeyA","KeyS","KeyD"];
+function clearTouchMove(){touchMoveCodes.forEach(code=>keys.delete(code));if(moveKnob)moveKnob.style.transform="translate(0px,0px)";}
+if(moveStick&&moveKnob){
+ let stickPointer=null;
+ const moveStickPointer=event=>{
+  if(stickPointer!==event.pointerId)return;
+  const rect=moveStick.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+  let dx=event.clientX-cx,dy=event.clientY-cy;
+  const limit=Math.min(rect.width,rect.height)*.31,len=Math.hypot(dx,dy);
+  if(len>limit){dx=dx/len*limit;dy=dy/len*limit;}
+  moveKnob.style.transform="translate("+dx+"px,"+dy+"px)";
+  touchMoveCodes.forEach(code=>keys.delete(code));
+  if(running&&!paused){if(dy<-limit*.2)keys.add("KeyW");if(dy>limit*.2)keys.add("KeyS");if(dx<-limit*.2)keys.add("KeyA");if(dx>limit*.2)keys.add("KeyD");}
+ };
+ moveStick.addEventListener("pointerdown",event=>{event.preventDefault();if(!running||paused)return;stickPointer=event.pointerId;moveStick.setPointerCapture(event.pointerId);moveStickPointer(event);});
+ moveStick.addEventListener("pointermove",moveStickPointer);
+ const releaseStick=event=>{if(stickPointer!==event.pointerId)return;stickPointer=null;clearTouchMove();};
+ for(const type of ["pointerup","pointercancel","lostpointercapture"])moveStick.addEventListener(type,releaseStick);
+}
+if(cameraLook){
+ let lookPointer=null,lastLookX=0;
+ cameraLook.addEventListener("pointerdown",event=>{if(!running||paused)return;lookPointer=event.pointerId;lastLookX=event.clientX;cameraLook.setPointerCapture(event.pointerId);});
+ cameraLook.addEventListener("pointermove",event=>{
+  if(lookPointer!==event.pointerId||!running||paused)return;
+  const dx=event.clientX-lastLookX;lastLookX=event.clientX;
+  const turn=dx*.006;
+  if(playerMode==="vehicle")vehicle.rotation.y-=turn;
+  else{player.heading-=turn;if(avatar)avatar.rotation.y=player.heading;}
+ });
+ const releaseLook=event=>{if(lookPointer===event.pointerId)lookPointer=null;};
+ for(const type of ["pointerup","pointercancel","lostpointercapture"])cameraLook.addEventListener(type,releaseLook);
+}
 if(touchControls){
- const release=(button)=>{const code=button.dataset.hold;if(code){keys.delete(code);button.classList.remove("pressed");}};
+ const release=button=>{const code=button.dataset.hold;if(code){keys.delete(code);button.classList.remove("pressed");}};
  touchControls.querySelectorAll("[data-hold]").forEach(button=>{
   const code=button.dataset.hold;
-  button.addEventListener("pointerdown",event=>{event.preventDefault();button.setPointerCapture?.(event.pointerId);keys.add(code);button.classList.add("pressed");});
+  button.addEventListener("pointerdown",event=>{event.preventDefault();if(!running||paused)return;button.setPointerCapture?.(event.pointerId);keys.add(code);button.classList.add("pressed");});
   for(const type of ["pointerup","pointercancel","lostpointercapture"])button.addEventListener(type,()=>release(button));
  });
  touchControls.querySelectorAll("[data-tap]").forEach(button=>{
-  button.addEventListener("pointerdown",event=>{event.preventDefault();const code=button.dataset.tap;
-   if(!running||paused)return;
+  button.addEventListener("pointerdown",event=>{event.preventDefault();const code=button.dataset.tap;if(!running||paused)return;
    if(code==="KeyE"&&dialoguePanel.classList.contains("hidden"))interact();
    if(code==="KeyF"){if(playerMode==="vehicle")exitVehicle();else enterVehicle();}
    if(code==="KeyI"&&dialoguePanel.classList.contains("hidden"))openInventory();
@@ -875,6 +909,7 @@ if(touchControls){
  });
 }
 window.addEventListener("pointerup",()=>{if(touchControls)touchControls.querySelectorAll("[data-hold]").forEach(button=>{keys.delete(button.dataset.hold);button.classList.remove("pressed");});});
+window.addEventListener("blur",()=>{keys.clear();clearTouchMove();});
 window.addEventListener("contextmenu",event=>{if(touchControls?.contains(event.target))event.preventDefault();});
 
 window.addEventListener("resize", () => {
