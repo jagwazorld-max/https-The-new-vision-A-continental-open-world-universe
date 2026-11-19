@@ -19,6 +19,7 @@ const minimapCanvas = document.querySelector("#minimap");
 const minimapContext = minimapCanvas?.getContext("2d");
 
 let scene, camera, renderer, player, vehicle, clock;
+let cameraPitch = 0;
 let running = false;
 let paused = false;
 let speed = 0;
@@ -770,8 +771,8 @@ function update(delta) {
   for(const car of traffic)if(vehicle.position.distanceTo(car.mesh.position)<2.2){vehicle.position.copy(prev);speed=0;break;}
   for(const person of pedestrians)if(vehicle.position.distanceTo(person.mesh.position)<1.9&&Math.abs(speed)>7&&!person.reported){person.reported=true;wantedLevel=Math.min(3,wantedLevel+1);wantedTimer=55;updateWantedDisplay();showDialogue("CITY POLICE","A patrol has been alerted after a dangerous collision. Leave the area or wait for the pursuit to end.","DRIVE",closeDialogue);saveProgress();break;}
   player.position.copy(vehicle.position);
-  const offset=new THREE.Vector3(0,7.2,-12).applyAxisAngle(new THREE.Vector3(0,1,0),vehicle.rotation.y);
-  camera.position.lerp(vehicle.position.clone().add(offset),1-Math.pow(.001,delta)); camera.lookAt(vehicle.position.x,1.1,vehicle.position.z);
+  const offset=new THREE.Vector3(0,7.2,-12).applyAxisAngle(new THREE.Vector3(1,0,0),cameraPitch).applyAxisAngle(new THREE.Vector3(0,1,0),vehicle.rotation.y);
+  camera.position.lerp(vehicle.position.clone().add(offset),1-Math.pow(.001,delta)); camera.lookAt(vehicle.position.x,1.1+cameraPitch*3.5,vehicle.position.z);
   speedLabel.textContent=String(Math.round(Math.abs(speed)*3.6));
  }else{
   const f=keys.has("KeyW")||keys.has("ArrowUp"),b=keys.has("KeyS")||keys.has("ArrowDown");
@@ -787,8 +788,8 @@ function update(delta) {
   avatar.position.copy(player.position);avatar.rotation.y=player.heading;
   const moving=f||b;animateHumanoid(avatar,clock.elapsedTime*(pace>6?10:7),moving?1:0);
   if(moving){avatar.rotation.y=player.heading;}
-  const offset=new THREE.Vector3(0,5.2,-8.5).applyAxisAngle(new THREE.Vector3(0,1,0),player.heading);
-  camera.position.lerp(player.position.clone().add(offset),1-Math.pow(.001,delta));camera.lookAt(player.position.x,1.1,player.position.z);
+  const offset=new THREE.Vector3(0,5.2,-8.5).applyAxisAngle(new THREE.Vector3(1,0,0),cameraPitch).applyAxisAngle(new THREE.Vector3(0,1,0),player.heading);
+  camera.position.lerp(player.position.clone().add(offset),1-Math.pow(.001,delta));camera.lookAt(player.position.x,1.1+cameraPitch*3.5,player.position.z);
   speedLabel.textContent="—";
  }
  if(missionMarker.visible){missionPulse+=delta;missionMarker.rotation.y+=delta*.55;missionMarker.position.y=Math.sin(missionPulse*2)*.12;}
@@ -883,12 +884,12 @@ if(moveStick&&moveKnob){
  for(const type of ["pointerup","pointercancel","lostpointercapture"])moveStick.addEventListener(type,releaseStick);
 }
 if(cameraLook){
- let lookPointer=null,lastLookX=0;
- cameraLook.addEventListener("pointerdown",event=>{if(!running||paused)return;lookPointer=event.pointerId;lastLookX=event.clientX;cameraLook.setPointerCapture(event.pointerId);});
+ let lookPointer=null,lastLookX=0,lastLookY=0;
+ cameraLook.addEventListener("pointerdown",event=>{if(!running||paused)return;lookPointer=event.pointerId;lastLookX=event.clientX;lastLookY=event.clientY;cameraLook.setPointerCapture(event.pointerId);});
  cameraLook.addEventListener("pointermove",event=>{
   if(lookPointer!==event.pointerId||!running||paused)return;
-  const dx=event.clientX-lastLookX;lastLookX=event.clientX;
-  const turn=dx*.006;
+  const dx=event.clientX-lastLookX,dy=event.clientY-lastLookY;lastLookX=event.clientX;lastLookY=event.clientY;
+  const turn=dx*.006;cameraPitch=THREE.MathUtils.clamp(cameraPitch+dy*.0045,-.42,.62);
   if(playerMode==="vehicle")vehicle.rotation.y-=turn;
   else{player.heading-=turn;if(avatar)avatar.rotation.y=player.heading;}
  });
