@@ -14,6 +14,7 @@ let scene, camera, renderer, player, vehicle, clock;
 let running = false;
 let paused = false;
 let speed = 0;
+let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionPulse = 0;
 const traffic = [];
 const pedestrians = [];
 const buildingBounds = [];
@@ -151,6 +152,46 @@ function updateAmbientLife(delta) {
     person.mesh.rotation.y = Math.atan2(Math.cos(t), -Math.sin(t * .7));
   }
 }
+
+function makeAvatar() {
+  const group = new THREE.Group();
+  const skin = material(0x87583e), outfit = material(0x263f48), trousers = material(0x252b32);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.22,14,12),skin); head.position.y=1.58; group.add(head);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(.28,.55,4,9),outfit); torso.position.y=1.05; group.add(torso);
+  const legs=[];
+  for(const x of [-.13,.13]) { const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.105,.48,3,7),trousers); leg.position.set(x,.42,0); group.add(leg); legs.push(leg); }
+  const arms=[];
+  for(const x of [-.34,.34]) { const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.42,3,7),skin); arm.position.set(x,1.02,0); group.add(arm); arms.push(arm); }
+  group.userData.limbs=[...legs,...arms]; group.visible=false; scene.add(group); return group;
+}
+function makeMissionMarker() {
+  const g=new THREE.Group();
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.15,.09,8,32),new THREE.MeshBasicMaterial({color:0xe5bd69})); ring.rotation.x=Math.PI/2; ring.position.y=.18; g.add(ring);
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.035,.12,3.8,10,1,true),new THREE.MeshBasicMaterial({color:0xe5bd69,transparent:true,opacity:.38})); beam.position.y=2.1; g.add(beam);
+  const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.38),new THREE.MeshStandardMaterial({color:0xffd37a,emissive:0x8b5c18})); gem.position.y=4.1; g.add(gem);
+  g.position.set(18,0,30); scene.add(g); return g;
+}
+function saveProgress() {
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,playerMode,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+}
+function exitVehicle() {
+  if(playerMode!=="vehicle"||Math.abs(speed)>2.2)return;
+  playerMode="foot"; speed=0;
+  const side=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),vehicle.rotation.y);
+  player.position.copy(vehicle.position).addScaledVector(side,2.1); player.heading=vehicle.rotation.y;
+  avatar.position.copy(player.position); avatar.rotation.y=player.heading; avatar.visible=true;
+}
+function enterVehicle() {
+  if(playerMode!=="foot"||player.position.distanceTo(vehicle.position)>4.2)return;
+  playerMode="vehicle"; avatar.visible=false; player.position.copy(vehicle.position);
+}
+function interact() {
+  if(playerMode==="foot"&&!missionComplete&&player.position.distanceTo(missionMarker.position)<3.8){
+    missionComplete=true; world.cash+=500; objectiveLabel.textContent="First contact complete";
+    cashLabel.textContent=world.cash.toLocaleString(); missionMarker.visible=false; saveProgress();
+  }
+}
+
 function buildWorld() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x9cb6c0);
@@ -213,47 +254,46 @@ function buildWorld() {
   vehicle = makeCar();
   populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
+  avatar = makeAvatar(); missionMarker = makeMissionMarker();
   clock = new THREE.Clock();
 }
+
 function update(delta) {
-  if (!running || paused) return;
-  const forward = keys.has("KeyW") || keys.has("ArrowUp");
-  const reverse = keys.has("KeyS") || keys.has("ArrowDown");
-  const left = keys.has("KeyA") || keys.has("ArrowLeft");
-  const right = keys.has("KeyD") || keys.has("ArrowRight");
-  const braking = keys.has("Space");
-  const target = forward ? 26 : reverse ? -12 : 0;
-  speed = THREE.MathUtils.damp(speed, braking ? 0 : target, 2.8, delta);
-  const steer = (right ? 1 : 0) - (left ? 1 : 0);
-  if (Math.abs(speed) > .25) vehicle.rotation.y -= steer * delta * 1.7 * Math.sign(speed) * Math.min(1, Math.abs(speed) / 8);
-  const direction = new THREE.Vector3(Math.sin(vehicle.rotation.y), 0, Math.cos(vehicle.rotation.y));
-  const previousPosition = vehicle.position.clone();
-  vehicle.position.addScaledVector(direction, speed * delta);
-  vehicle.position.x = clamp(vehicle.position.x, -112, 112);
-  vehicle.position.z = clamp(vehicle.position.z, -105, 112);
-  if (collidesWithBuilding(vehicle.position)) {
-    vehicle.position.copy(previousPosition);
-    speed = 0;
-  }
-  for (const car of traffic) {
-    if (vehicle.position.distanceTo(car.mesh.position) < 2.2) {
-      vehicle.position.copy(previousPosition);
-      speed = 0;
-      break;
-    }
-  }
-  updateAmbientLife(delta);
+ if(!running||paused)return;
+ updateAmbientLife(delta);
+ if(playerMode==="vehicle"){
+  const f=keys.has("KeyW")||keys.has("ArrowUp"),r=keys.has("KeyS")||keys.has("ArrowDown");
+  const l=keys.has("KeyA")||keys.has("ArrowLeft"),q=keys.has("KeyD")||keys.has("ArrowRight");
+  speed=THREE.MathUtils.damp(speed,keys.has("Space")?0:f?26:r?-12:0,2.8,delta);
+  const steer=(q?1:0)-(l?1:0);
+  if(Math.abs(speed)>.25)vehicle.rotation.y-=steer*delta*1.7*Math.sign(speed)*Math.min(1,Math.abs(speed)/8);
+  const dir=new THREE.Vector3(Math.sin(vehicle.rotation.y),0,Math.cos(vehicle.rotation.y)),prev=vehicle.position.clone();
+  vehicle.position.addScaledVector(dir,speed*delta); vehicle.position.x=clamp(vehicle.position.x,-112,112); vehicle.position.z=clamp(vehicle.position.z,-105,112);
+  if(collidesWithBuilding(vehicle.position)){vehicle.position.copy(prev);speed=0;}
+  for(const car of traffic)if(vehicle.position.distanceTo(car.mesh.position)<2.2){vehicle.position.copy(prev);speed=0;break;}
   player.position.copy(vehicle.position);
-  const cameraOffset = new THREE.Vector3(0, 7.2, -12).applyAxisAngle(new THREE.Vector3(0, 1, 0), vehicle.rotation.y);
-  const desired = vehicle.position.clone().add(cameraOffset);
-  camera.position.lerp(desired, 1 - Math.pow(.001, delta));
-  camera.lookAt(vehicle.position.x, 1.1, vehicle.position.z);
-  speedLabel.textContent = String(Math.round(Math.abs(speed) * 3.6));
-  if (!world.visited && vehicle.position.length() > 28) {
-    world.visited = true;
-    objectiveLabel.textContent = "District discovered";
-    cashLabel.textContent = world.cash.toLocaleString();
-  }
+  const offset=new THREE.Vector3(0,7.2,-12).applyAxisAngle(new THREE.Vector3(0,1,0),vehicle.rotation.y);
+  camera.position.lerp(vehicle.position.clone().add(offset),1-Math.pow(.001,delta)); camera.lookAt(vehicle.position.x,1.1,vehicle.position.z);
+  speedLabel.textContent=String(Math.round(Math.abs(speed)*3.6));
+ }else{
+  const f=keys.has("KeyW")||keys.has("ArrowUp"),b=keys.has("KeyS")||keys.has("ArrowDown");
+  const l=keys.has("KeyA")||keys.has("ArrowLeft"),r=keys.has("KeyD")||keys.has("ArrowRight");
+  player.heading-=((r?1:0)-(l?1:0))*delta*2.35;
+  const pace=keys.has("ShiftLeft")||keys.has("ShiftRight")?8.2:4.6;
+  const dir=new THREE.Vector3(Math.sin(player.heading),0,Math.cos(player.heading)),prev=player.position.clone();
+  player.position.addScaledVector(dir,((f?1:0)-(b?1:0))*pace*delta);
+  player.position.x=clamp(player.position.x,-112,112);player.position.z=clamp(player.position.z,-105,112);
+  if(collidesWithBuilding(player.position))player.position.copy(prev);
+  for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45)player.position.copy(prev);
+  avatar.position.copy(player.position);avatar.rotation.y=player.heading;
+  const moving=f||b;avatar.userData.limbs.forEach((limb,i)=>{const swing=moving?Math.sin(clock.elapsedTime*(pace>6?11:7))*.42:0;limb.rotation.x=swing*(i%2?-1:1);});
+  const offset=new THREE.Vector3(0,5.2,-8.5).applyAxisAngle(new THREE.Vector3(0,1,0),player.heading);
+  camera.position.lerp(player.position.clone().add(offset),1-Math.pow(.001,delta));camera.lookAt(player.position.x,1.1,player.position.z);
+  speedLabel.textContent="—";
+ }
+ if(missionMarker.visible){missionPulse+=delta;missionMarker.rotation.y+=delta*.55;missionMarker.position.y=Math.sin(missionPulse*2)*.12;}
+ const pos=playerMode==="vehicle"?vehicle.position:player.position;
+ if(!world.visited&&pos.length()>28){world.visited=true;if(!missionComplete)objectiveLabel.textContent="Find the gold marker on foot";saveProgress();}
 }
 function frame() {
   requestAnimationFrame(frame);
@@ -271,12 +311,14 @@ function startGame() {
   hud.classList.remove("hidden");
   running = true;
   setPaused(false);
-  try { localStorage.setItem("crownline-save", JSON.stringify({ cash: world.cash, visited: world.visited })); } catch {}
+  saveProgress();
 }
 window.addEventListener("keydown", event => {
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) event.preventDefault();
   keys.add(event.code);
   if (event.code === "Escape" && running) setPaused(!paused);
+  if (event.code === "KeyF" && running && !paused) { if(playerMode==="vehicle") exitVehicle(); else enterVehicle(); }
+  if (event.code === "KeyE" && running && !paused) interact();
 });
 window.addEventListener("keyup", event => keys.delete(event.code));
 window.addEventListener("blur", () => keys.clear());
@@ -294,7 +336,18 @@ try {
   buildWorld();
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
-    if (saved) { world.cash = Number(saved.cash) || 2500; world.visited = Boolean(saved.visited); cashLabel.textContent = world.cash.toLocaleString(); if (world.visited) objectiveLabel.textContent = "District discovered"; }
+    if(saved){
+      world.cash=Number(saved.cash)||2500;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);
+      if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
+      if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
+      if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
+      if(Number.isFinite(saved.playerHeading))player.heading=saved.playerHeading;
+      if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
+      if(missionComplete)missionMarker.visible=false;
+      cashLabel.textContent=world.cash.toLocaleString();
+      if(missionComplete)objectiveLabel.textContent="First contact complete";
+      else if(world.visited)objectiveLabel.textContent="Find the gold marker on foot";
+    }
   } catch {}
   loading.classList.add("hidden");
   frame();
