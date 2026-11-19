@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 1.0 fuel station and vehicle economy
+## Current milestone — 1.1 police patrols and wanted system
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -26,6 +26,9 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Added purchasable home furnishings: a living-room television/media unit ($400), indoor plant ($250) and framed artwork ($300). Purchased items appear in the apartment and persist in the local save.
 - Added a roadside CROWNLINE Fuel station with a canopy, branded sign, three fuel pumps and an attendant.
 - Vehicle fuel starts at 100%, drains gradually while driving, and is saved locally. At the station, exit the vehicle and press E nearby to buy a $100 top-up of up to 25% fuel. Driving is disabled when the tank is empty.
+- Added a marked police cruiser with flashing red-and-blue emergency lights and an active pursuit behaviour.
+- Dangerous high-speed collisions with pedestrians alert the police and raise the wanted level, up to three stars. Patrol officers pursue the player, and wanted status clears after the pursuit timer expires.
+- If officers catch the player, a $250 fine is deducted and the pursuit ends. The HUD displays the current wanted status.
 - Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
