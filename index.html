@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080d13">
+  <meta name="description" content="CROWNLINE — a continental open-world universe by JagX and JRILICENSE.">
+  <title>CROWNLINE — The New Vision</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <main id="game-shell">
+    <canvas id="world" aria-label="CROWNLINE 3D game world"></canvas>
+    <div class="topbar">
+      <a class="brand" href="#" aria-label="CROWNLINE home"><span class="brand-mark">C</span><span>CROWNLINE<small>THE NEW VISION</small></span></a>
+      <div class="top-status"><span class="live-dot"></span> WORLD SIMULATION <b>ALPHA 0.1</b></div>
+      <button id="pause-button" class="icon-button" aria-label="Pause game">Ⅱ</button>
+    </div>
+    <section id="intro" class="overlay intro">
+      <div class="intro-copy">
+        <p class="eyebrow">JAGX × JRILICENSE PRESENT</p>
+        <h1>YOUR WORLD.<br><em>YOUR LEGACY.</em></h1>
+        <p class="intro-description">A living continental universe. Explore cities, build your name, meet its people and write your own story.</p>
+        <button id="start-button" class="primary-button">ENTER THE WORLD <span>↗</span></button>
+        <p class="intro-foot">A NEW OPEN-WORLD EXPERIENCE IS TAKING SHAPE.</p>
+      </div>
+      <div class="intro-side"><span>01 / 54</span><span>WESTERN COAST DISTRICT</span><span>FREE ROAM · SINGLE PLAYER PROTOTYPE</span></div>
+    </section>
+    <section id="pause-screen" class="overlay pause hidden">
+      <p class="eyebrow">CROWNLINE</p><h2>TAKE A BREATHER.</h2>
+      <button id="resume-button" class="primary-button">RESUME GAME</button>
+      <p class="muted">Progress is saved automatically on this device.</p>
+    </section>
+    <div id="hud" class="hud hidden">
+      <div class="mission-card"><span class="eyebrow">CURRENT OBJECTIVE</span><strong id="objective">Explore the district</strong><small>Discover the city and find your next opportunity.</small></div>
+      <div class="hud-right"><div class="district-label">WESTERN COAST <b>·</b> CENTRAL DISTRICT</div><div class="cash">$ <span id="cash">2,500</span></div><div class="speed"><span id="speed">0</span><small>KM/H</small></div></div>
+      <div class="controls-hint">W A S D <span>MOVE / DRIVE</span> &nbsp; SHIFT <span>SPRINT</span> &nbsp; SPACE <span>BRAKE</span></div>
+    </div>
+    <div id="loading" class="loading"><span class="loader"></span><span>BUILDING YOUR WORLD</span></div>
+    <div id="error-message" class="error-message hidden">The 3D engine could not start. Please reload with an internet connection.</div>
+  </main>
+  <script type="module" src="./src/game.js"></script>
+</body>
+</html>
