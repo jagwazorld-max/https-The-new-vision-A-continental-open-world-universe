@@ -215,7 +215,7 @@ function advanceMission() {
 }
 
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,supplies:world.supplies,playerMode,inShop,inApartment:inApartment && !homeSpawn,ownsApartment,homeSpawn,homeUpgrades,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function enterApartment() {
   closeDialogue();
