@@ -9,12 +9,16 @@ const errorMessage = document.querySelector("#error-message");
 const cashLabel = document.querySelector("#cash");
 const speedLabel = document.querySelector("#speed");
 const objectiveLabel = document.querySelector("#objective");
+const dialoguePanel = document.querySelector("#dialogue");
+const dialogueSpeaker = document.querySelector("#dialogue-speaker");
+const dialogueText = document.querySelector("#dialogue-text");
+const dialogueAction = document.querySelector("#dialogue-action");
 
 let scene, camera, renderer, player, vehicle, clock;
 let running = false;
 let paused = false;
 let speed = 0;
-let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionPulse = 0;
+let playerMode = 'vehicle', avatar = null, missionMarker = null, missionComplete = false, missionStage = 0, missionPulse = 0;
 const traffic = [];
 const pedestrians = [];
 const buildingBounds = [];
@@ -171,8 +175,36 @@ function makeMissionMarker() {
   const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.38),new THREE.MeshStandardMaterial({color:0xffd37a,emissive:0x8b5c18})); gem.position.y=4.1; g.add(gem);
   g.position.set(18,0,30); scene.add(g); return g;
 }
+
+function makeStaticNpc(x,z,shirtColor=0x9b5b36) {
+ const g=new THREE.Group(),skin=material(0x87583e),shirt=material(shirtColor),pants=material(0x292f35);
+ const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.58,4,8),shirt);torso.position.y=1.03;g.add(torso);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),skin);head.position.y=1.55;g.add(head);
+ for(const side of [-1,1]){
+  const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.105,.48,3,7),pants);leg.position.set(side*.13,.4,0);g.add(leg);
+  const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.08,.4,3,7),skin);arm.position.set(side*.32,1.02,0);arm.rotation.z=side*.12;g.add(arm);
+ }
+ g.position.set(x,0,z);scene.add(g);return g;
+}
+function showDialogue(speaker,message,action) {
+ dialogueSpeaker.textContent=speaker;dialogueText.textContent=message;dialogueAction.textContent=action;
+ dialoguePanel.classList.remove("hidden");
+}
+function closeDialogue(){dialoguePanel.classList.add("hidden");}
+function advanceMission() {
+ closeDialogue();
+ if(missionStage===0){
+  missionStage=1;missionMarker.position.set(-25,0,-32);
+  objectiveLabel.textContent="Deliver the supplies to the dock worker";saveProgress();
+ }else if(missionStage===1){
+  missionStage=2;missionComplete=true;world.cash+=1000;missionMarker.visible=false;
+  objectiveLabel.textContent="Delivery completed · $1,000 earned";
+  cashLabel.textContent=world.cash.toLocaleString();saveProgress();
+ }
+}
+
 function saveProgress() {
-  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,playerMode,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
+  try { localStorage.setItem("crownline-save",JSON.stringify({cash:world.cash,visited:world.visited,missionComplete,missionStage,playerMode,vehiclePosition:vehicle.position.toArray(),vehicleHeading:vehicle.rotation.y,playerPosition:player.position.toArray(),playerHeading:player.heading})); } catch {}
 }
 function exitVehicle() {
   if(playerMode!=="vehicle"||Math.abs(speed)>2.2)return;
@@ -186,10 +218,9 @@ function enterVehicle() {
   playerMode="vehicle"; avatar.visible=false; player.position.copy(vehicle.position);
 }
 function interact() {
-  if(playerMode==="foot"&&!missionComplete&&player.position.distanceTo(missionMarker.position)<3.8){
-    missionComplete=true; world.cash+=500; objectiveLabel.textContent="First contact complete";
-    cashLabel.textContent=world.cash.toLocaleString(); missionMarker.visible=false; saveProgress();
-  }
+ if(playerMode!=="foot"||missionComplete||player.position.distanceTo(missionMarker.position)>4.5)return;
+ if(missionStage===0)showDialogue("THE WATERFRONT CONTACT","We need a sealed supply crate taken to our dock worker. The marked hand-off point is just across the district. Can you make the delivery?","ACCEPT DELIVERY");
+ else if(missionStage===1)showDialogue("DOCK WORKER","That's the crate we were waiting for. The waterfront crew can take it from here. Thank you for getting it here safely.","COMPLETE DELIVERY · $1,000");
 }
 
 function buildWorld() {
@@ -255,6 +286,7 @@ function buildWorld() {
   populateLife();
   player = { position: vehicle.position.clone(), heading: 0 };
   avatar = makeAvatar(); missionMarker = makeMissionMarker();
+  makeStaticNpc(20,31,0x9b5b36); makeStaticNpc(-27,-32,0x315b58);
   clock = new THREE.Clock();
 }
 
@@ -332,21 +364,24 @@ window.addEventListener("resize", () => {
 document.querySelector("#start-button").addEventListener("click", startGame);
 document.querySelector("#pause-button").addEventListener("click", () => { if (running) setPaused(true); });
 document.querySelector("#resume-button").addEventListener("click", () => setPaused(false));
+dialogueAction.addEventListener("click", advanceMission);
 try {
   buildWorld();
   try {
     const saved = JSON.parse(localStorage.getItem("crownline-save") || "null");
     if(saved){
-      world.cash=Number(saved.cash)||2500;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);
+      world.cash=Number(saved.cash)||2500;world.visited=Boolean(saved.visited);missionComplete=Boolean(saved.missionComplete);missionStage=Number.isInteger(saved.missionStage)?clamp(saved.missionStage,0,2):(missionComplete?2:0);
       if(Array.isArray(saved.vehiclePosition))vehicle.position.fromArray(saved.vehiclePosition);
       if(Number.isFinite(saved.vehicleHeading))vehicle.rotation.y=saved.vehicleHeading;
       if(Array.isArray(saved.playerPosition))player.position.fromArray(saved.playerPosition);
       if(Number.isFinite(saved.playerHeading))player.heading=saved.playerHeading;
       if(saved.playerMode==="foot"){playerMode="foot";avatar.visible=true;avatar.position.copy(player.position);avatar.rotation.y=player.heading;}
-      if(missionComplete)missionMarker.visible=false;
+      if(missionStage===1)missionMarker.position.set(-25,0,-32);
+      if(missionComplete||missionStage===2)missionMarker.visible=false;
       cashLabel.textContent=world.cash.toLocaleString();
-      if(missionComplete)objectiveLabel.textContent="First contact complete";
-      else if(world.visited)objectiveLabel.textContent="Find the gold marker on foot";
+      if(missionStage===2)objectiveLabel.textContent="Delivery completed · $1,000 earned";
+      else if(missionStage===1)objectiveLabel.textContent="Deliver the supplies to the dock worker";
+      else if(world.visited)objectiveLabel.textContent="Meet the waterfront contact";
     }
   } catch {}
   loading.classList.add("hidden");
