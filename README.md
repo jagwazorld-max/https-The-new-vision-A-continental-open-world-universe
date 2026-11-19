@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 0.7 enterable market interior
+## Current milestone — 0.8 ownable apartment and enterable market
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -18,7 +18,12 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Completing the delivery awards $1,000; mission stage and cash persist in the local save.
 - Added the named Corner Market storefront with a nearby shopkeeper and an on-foot interaction.
 - Players can purchase a Field Kit for $250; cash and owned kit count persist locally.
-- Added a distinctive civic clock tower as a visible district landmark with collision boundaries.\n- Added a live district minimap showing the player, Corner Market, civic tower and active mission marker.\n- Corner Market is now enterable: explore its interior, browse stocked shelves, buy Field Kits, and leave through the entrance. Interior position is preserved in local saves.\n- Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
+- Added a distinctive civic clock tower as a visible district landmark with collision boundaries.
+- Added a live district minimap showing the player, Corner Market, civic tower and active mission marker.
+- Corner Market is enterable: explore its interior, browse stocked shelves, buy Field Kits, and leave through the entrance. Interior position is preserved in local saves.
+- Added an ownable Central District apartment for $1,500, with a furnished bedroom, living room, work desk and wardrobe.
+- Apartment ownership and interior location persist in the local save; resting at the bed saves the home spawn point.
+- Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
 - Responsive title screen and local browser save for basic progress.
@@ -34,7 +39,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 
 - **W / A / S / D** or arrow keys — drive and steer
 - **F** — enter or exit vehicle
-- **E** — talk to mission characters or interact with Corner Market while on foot
+- **E** — talk to mission characters, enter the market or apartment, shop, and use home furniture while on foot
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
 - **Esc** — pause or resume
@@ -44,7 +49,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 - `index.html` — game shell and HUD
 - `styles.css` — interface and responsive layout
 - `src/game.js` — Three.js world and prototype gameplay
-- `.github/workflows/pages.yml` — GitHub Pages deployment
+- `.github/workflows/pages.yml` — validates JavaScript and publishes only the static game files to GitHub Pages
 
 ## Roadmap
 
