@@ -9,6 +9,8 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
 - Third-person follow camera and a drivable starter vehicle.
+- Moving ambient traffic and pedestrians bring the starter district to life.
+- Building and vehicle collision checks stop the player car passing through solid objects.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
 - Responsive title screen and local browser save for basic progress.
 - GitHub Pages workflow for static hosting.
