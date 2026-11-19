@@ -172,6 +172,7 @@ function makeRoadInfrastructure(isTouchDevice) {
       const lens = new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),mat);
       lens.position.set(face*.22,y,.18); pole.add(lens); lenses[name]=lens;
     }
+    lenses.axis = x * z > 0 ? "z" : "x";
     trafficSignalLenses.push(lenses);
     scene.add(pole);
   }
@@ -332,12 +333,17 @@ function collidesWithBuilding(position) {
   return buildingBounds.some(b => position.x > b.minX && position.x < b.maxX && position.z > b.minZ && position.z < b.maxZ);
 }
 function updateAmbientLife(delta) {
-  const signalPhase = clock.elapsedTime % 22;
-  const signalState = signalPhase < 14 ? "green" : signalPhase < 17 ? "amber" : "red";
+  // A protected two-axis cycle: north/south first, then east/west.
+  const signalPhase = clock.elapsedTime % 26;
+  const axisSignal = axis => {
+    const phase = axis === "z" ? signalPhase : (signalPhase + 13) % 26;
+    return phase < 10 ? "green" : phase < 13 ? "amber" : "red";
+  };
   for (const lenses of trafficSignalLenses) {
-    lenses.red.visible = signalState === "red";
-    lenses.amber.visible = signalState === "amber";
-    lenses.green.visible = signalState === "green";
+    const state = axisSignal(lenses.axis);
+    lenses.red.visible = state === "red";
+    lenses.amber.visible = state === "amber";
+    lenses.green.visible = state === "green";
   }
   for (const car of traffic) {
     const position = car.mesh.position;
@@ -345,7 +351,8 @@ function updateAmbientLife(delta) {
     const junction = car.direction > 0 ? Math.ceil((coordinate + .001) / 32) * 32 : Math.floor((coordinate - .001) / 32) * 32;
     const stopLine = junction - car.direction * 7.5;
     const distanceToLine = car.direction * (stopLine - coordinate);
-    const mustStop = car.axis === "z" && distanceToLine >= 0 && distanceToLine < 12 &&
+    const signalState = axisSignal(car.axis);
+    const mustStop = distanceToLine >= 0 && distanceToLine < 12 &&
       (signalState === "red" || (signalState === "amber" && distanceToLine > 4));
     let followingGap = Infinity;
     for (const other of traffic) {
