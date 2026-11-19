@@ -5,3 +5,4 @@
 
 /* ALPHA 0.6 live district minimap */
 .minimap-wrap{position:absolute;right:4.2vw;bottom:78px;width:160px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}.minimap-wrap span{font-size:8px;letter-spacing:2px;color:#e0c58d}#minimap{width:160px;height:160px;border:1px solid #d8b36a88;box-shadow:0 8px 28px #0008;background:#080d13}@media(max-width:650px){.minimap-wrap{right:14px;bottom:72px;width:112px}#minimap{width:112px;height:112px}}
+\n/* ALPHA 0.7 interior interaction */\n
