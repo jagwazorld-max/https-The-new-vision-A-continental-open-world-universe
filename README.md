@@ -4,7 +4,7 @@
 
 CROWNLINE is being restarted in this repository as a browser-first 3D game prototype, with PC as the primary target. The long-term vision is a large, explorable world spanning selected African countries, regions and cities. Locations will draw on real geography and local atmosphere while using fictionalized characters, businesses, stories and buildings where appropriate.
 
-## Current milestone — 0.9 apartment furnishing and home spawn
+## Current milestone — 1.0 fuel station and vehicle economy
 
 - Browser-based 3D scene powered by Three.js.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
@@ -24,6 +24,8 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 - Added an ownable Central District apartment for $1,500, with a furnished bedroom, living room, work desk and wardrobe.
 - Apartment ownership and interior location persist in the local save; resting at the bed saves the home spawn point, which is now used when the player reloads the game on foot.
 - Added purchasable home furnishings: a living-room television/media unit ($400), indoor plant ($250) and framed artwork ($300). Purchased items appear in the apartment and persist in the local save.
+- Added a roadside CROWNLINE Fuel station with a canopy, branded sign, three fuel pumps and an attendant.
+- Vehicle fuel starts at 100%, drains gradually while driving, and is saved locally. At the station, exit the vehicle and press E nearby to buy a $100 top-up of up to 25% fuel. Driving is disabled when the tank is empty.
 - Fixed an initialization-order issue in the shop inventory state that could prevent the game module from starting.
 - Basic progress saving for cash, mission completion, player position and vehicle position.
 - Keyboard driving controls, speed display, objective HUD and pause/resume.
@@ -40,7 +42,7 @@ Serve this folder with any static web server, then open the local URL in a moder
 
 - **W / A / S / D** or arrow keys — drive and steer
 - **F** — enter or exit vehicle
-- **E** — talk to mission characters, enter the market or apartment, shop, and use home furniture while on foot
+- **E** — talk to mission characters, enter the market or apartment, refuel at the station, shop, and use home furniture while on foot
 - **Shift** — sprint while on foot
 - **Space** — brake while driving
 - **Esc** — pause or resume
