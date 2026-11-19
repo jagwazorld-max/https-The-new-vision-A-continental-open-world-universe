@@ -6,8 +6,11 @@ CROWNLINE is being restarted in this repository as a browser-first 3D game proto
 
 ## Current milestone — 2.5 traffic signal behaviour
 
-- Browser-based 3D scene powered by Three.js.\n- A continuous 12-minute day/night cycle changes the sky, fog, sunlight, ambient light and exposure; the in-game clock is shown in the top bar. The world clock is saved with player progress.\n- Street lamps illuminate the main road grid at night, building windows glow after dark, and the player's car headlights brighten the road ahead. Night lighting fades smoothly with the day cycle.
-- Added raised curbs and paved sidewalks along the road grid, zebra crossings at key junctions, and a four-way traffic-signal installation at the central civic intersection. Signals are currently visual city infrastructure; traffic-light AI is a later upgrade.\n- Traffic lights now cycle through green, amber and red; ambient cars slow down and stop at junction stop-lines, then accelerate when permitted.
+- Browser-based 3D scene powered by Three.js.
+- A continuous 12-minute day/night cycle changes the sky, fog, sunlight, ambient light and exposure; the in-game clock is shown in the top bar. The world clock is saved with player progress.
+- Street lamps illuminate the main road grid at night, building windows glow after dark, and the player's car headlights brighten the road ahead. Night lighting fades smoothly with the day cycle.
+- Added raised curbs and paved sidewalks along the road grid, zebra crossings at key junctions, and a four-way traffic-signal installation at the central civic intersection. Signals are currently visual city infrastructure; traffic-light AI is a later upgrade.
+- Traffic lights now cycle through green, amber and red; ambient cars slow down and stop at junction stop-lines, then accelerate when permitted.
 - Procedurally assembled coastal city district with roads, buildings, trees, shore and water.
 - Third-person follow camera and a drivable starter vehicle.
 - Moving ambient traffic and pedestrians bring the starter district to life.
