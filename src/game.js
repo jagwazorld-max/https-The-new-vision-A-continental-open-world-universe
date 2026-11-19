@@ -19,7 +19,7 @@ const minimapCanvas = document.querySelector("#minimap");
 const minimapContext = minimapCanvas?.getContext("2d");
 
 let scene, camera, renderer, player, vehicle, clock;
-let cameraPitch = 0;
+let cameraPitch = 0, cameraYaw = 0;
 let running = false;
 let paused = false;
 let speed = 0;
@@ -333,7 +333,7 @@ function buyApartment() {
 function exitVehicle() {
   if(playerMode!=="vehicle"||Math.abs(speed)>2.2)return;
   playerMode="foot"; speed=0;
-  const side=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),vehicle.rotation.y);
+  const side=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),vehicle.rotation.y+cameraYaw);
   player.position.copy(vehicle.position).addScaledVector(side,2.1); player.heading=vehicle.rotation.y;
   avatar.position.copy(player.position); avatar.rotation.y=player.heading; avatar.visible=true;
 }
@@ -786,9 +786,9 @@ function update(delta) {
   if(inApartment ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : inShop ? (Math.abs(player.position.x)>6.8 || Math.abs(player.position.z)>6.8) : inPoliceStation ? (Math.abs(player.position.x)>8.1 || Math.abs(player.position.z)>6.8) : collidesWithBuilding(player.position))player.position.copy(prev);
   for(const car of traffic)if(player.position.distanceTo(car.mesh.position)<1.45){player.position.copy(prev);damagePlayer(12);break;}
   avatar.position.copy(player.position);avatar.rotation.y=player.heading;
-  const moving=f||b;animateHumanoid(avatar,clock.elapsedTime*(pace>6?10:7),moving?1:0);
+  const moving=Math.abs(forwardInput-reverseInput)>.06;animateHumanoid(avatar,clock.elapsedTime*(pace>6?10:7)*(Math.abs(forwardInput-reverseInput)),moving?1:0);
   if(moving){avatar.rotation.y=player.heading;}
-  const offset=new THREE.Vector3(0,5.2,-8.5).applyAxisAngle(new THREE.Vector3(1,0,0),cameraPitch).applyAxisAngle(new THREE.Vector3(0,1,0),player.heading);
+  const offset=new THREE.Vector3(0,5.2,-8.5).applyAxisAngle(new THREE.Vector3(1,0,0),cameraPitch).applyAxisAngle(new THREE.Vector3(0,1,0),player.heading+cameraYaw);
   camera.position.lerp(player.position.clone().add(offset),1-Math.pow(.001,delta));camera.lookAt(player.position.x,1.1+cameraPitch*3.5,player.position.z);
   speedLabel.textContent="—";
  }
@@ -889,9 +889,7 @@ if(cameraLook){
  cameraLook.addEventListener("pointermove",event=>{
   if(lookPointer!==event.pointerId||!running||paused)return;
   const dx=event.clientX-lastLookX,dy=event.clientY-lastLookY;lastLookX=event.clientX;lastLookY=event.clientY;
-  const turn=dx*.006;cameraPitch=THREE.MathUtils.clamp(cameraPitch+dy*.0045,-.42,.62);
-  if(playerMode==="vehicle")vehicle.rotation.y-=turn;
-  else{player.heading-=turn;if(avatar)avatar.rotation.y=player.heading;}
+  cameraYaw=THREE.MathUtils.clamp(cameraYaw-dx*.006,-1.35,1.35);cameraPitch=THREE.MathUtils.clamp(cameraPitch+dy*.0045,-.42,.62);
  });
  const releaseLook=event=>{if(lookPointer===event.pointerId)lookPointer=null;};
  for(const type of ["pointerup","pointercancel","lostpointercapture"])cameraLook.addEventListener(type,releaseLook);
